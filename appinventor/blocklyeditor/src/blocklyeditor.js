@@ -16,13 +16,20 @@ Blockly.BlocklyEditor.startup = function(documentBody, formName) {
     inputText: 'ac_input_text'
   };
 
+  var viewblock_config = {
+    frame: 'ai_frame',
+    viewBlockDiv: 'ai_view_block',
+    inputText: 'ac_view_input_text'
+  };
+
   //This is what Blockly's init function does when passing options.
   //We are overriding the init process so putting it here
   goog.mixin(Blockly, {
     collapse : true,
     hasScrollbars: true,
     hasTrashcan: true,
-    configForTypeBlock: typeblock_config
+    configForTypeBlock: typeblock_config,
+    configForViewBlock: viewblock_config
   });
 
   Blockly.inject(documentBody);
@@ -32,8 +39,10 @@ Blockly.BlocklyEditor.startup = function(documentBody, formName) {
   //This would also be done in Blockly init, but we need to do it here cause of
   //the different init process in drawer (it'd be undefined at the time it hits
   //init in Blockly)
-  if (!Blockly.readOnly)
+  if (!Blockly.readOnly) {
     Blockly.TypeBlock(Blockly.configForTypeBlock);
+    Blockly.ViewBlock(Blockly.configForViewBlock);
+  };
 
   Blockly.BlocklyEditor.formName = formName;
 

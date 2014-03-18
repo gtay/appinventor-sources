@@ -28,6 +28,7 @@ Blockly.MSG_ARRANGE_S = 'Arrange Blocks Diagonally';
 Blockly.MSG_SORT_W = 'Sort Blocks by Width';
 Blockly.MSG_SORT_H = 'Sort Blocks by Height';
 Blockly.MSG_SORT_C = 'Sort Blocks by Category';
+Blockly.MSG_VIEW = 'Filter view by...';
 
 // Variable renaming.
 Blockly.MSG_CHANGE_VALUE_TITLE = 'Change value:';

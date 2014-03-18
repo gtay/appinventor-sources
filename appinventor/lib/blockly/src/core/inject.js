@@ -82,11 +82,13 @@ Blockly.parseOptions_ = function(options) {
     if (hasTrashcan === undefined) {
       hasTrashcan = hasCategories;
     }
+
     var hasCollapse = options['collapse'];
     if (hasCollapse === undefined) {
       hasCollapse = hasCategories;
     }
     var configForTypeBlock = options['typeblock_config'];
+    var configForViewBlock = options['viewblock_config'];
   }
   if (tree && !hasCategories) {
     // Scrollbars are not compatible with a non-flyout toolbox.
@@ -97,6 +99,7 @@ Blockly.parseOptions_ = function(options) {
       hasScrollbars = true;
     }
     var configForTypeBlock = null;
+    var configForViewBlock = null;
   }
   return {
     RTL: !!options['rtl'],
@@ -108,7 +111,8 @@ Blockly.parseOptions_ = function(options) {
     hasScrollbars: hasScrollbars,
     hasTrashcan: hasTrashcan,
     languageTree: tree,
-    configForTypeBlock: configForTypeBlock
+    configForTypeBlock: configForTypeBlock,
+    configForViewBlock: configForViewBlock
   };
 };
 
