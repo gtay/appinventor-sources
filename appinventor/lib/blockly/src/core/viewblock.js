@@ -175,8 +175,231 @@ Blockly.ViewBlock.show = function(){
   goog.dom.getElement(Blockly.ViewBlock.inputText_).focus();
   // If the input gets cleaned before adding the handler, all keys are read
   // correctly (at times it was missing the first char)
-  goog.dom.getElement(Blockly.ViewBlock.inputText_).value = 'viewblock';
+  goog.dom.getElement(Blockly.ViewBlock.inputText_).value = '';
   //goog.events.unlisten(Blockly.ViewBlock.docKh_, 'key', Blockly.ViewBlock.handleKey);
   goog.events.listen(Blockly.ViewBlock.inputKh_, 'key', Blockly.ViewBlock.handleKey);
   Blockly.ViewBlock.visible = true;
+};
+
+/**
+ * Used as an optimisation trick to avoid reloading components and built-ins unless there is a real
+ * need to do so. needsReload.components can be set to true when a component changes.
+ * Defaults to true so that it loads the first time (set to null after loading in lazyLoadOfOptions_())
+ * @type {{components: boolean}}
+ */
+Blockly.ViewBlock.needsReload = {
+  components: true
+};
+
+/**
+ * Lazily loading options because some of them are not available during bootstrapping, and some
+ * users will never use this functionality, so we avoid having to deal with changes such as handling
+ * renaming of variables and procedures (leaving it until the moment they are used, if ever).
+ * @private
+ */
+Blockly.ViewBlock.lazyLoadOfOptions_ = function () {
+
+  // Optimisation to avoid reloading all components and built-in objects unless it is needed.
+  // needsReload.components is setup when adding/renaming/removing a component in components.js
+  if (this.needsReload.components){
+    Blockly.ViewBlock.generateOptions();
+    this.needsReload.components = null;
+  }
+  //Blockly.ViewBlock.loadGlobalVariables_();
+  //Blockly.ViewBlock.loadProcedures_();
+  this.reloadOptionsAfterChanges_();
+};
+
+/**
+ * This function traverses the Language tree and re-creates all the options
+ * available for type blocking. It's needed in the case of modifying the
+ * Language tree after its creation (adding or renaming components, for instance).
+ * It also loads all the built-in blocks.
+ *
+ * call 'reloadOptionsAfterChanges_' after calling this. The function lazyLoadOfOptions_ is an
+ * example of how to call this function.
+ */
+Blockly.ViewBlock.generateOptions = function() {
+  var buildListOfOptions = function() {
+    var listOfOptions = {};
+    var viewblockArray;
+    var blocks = Blockly.mainWorkspace.getAllBlocks;
+    for (var i = 0; i < blocks.length; i++) {
+      if (blocks[i].category === 'Component' && blocks[i].instanceName) {
+        var block = blocks[i].instanceName;
+      } else if (blocks[i].category === 'Procedures') {
+        var block = (blocks[i].getTitleValue('NAME') || blocks[i].getTitleValue('PROCNAME'));
+      } else if (blocks[i].category === 'Text') {
+        var block = blocks[i].value;
+      } else {
+        var block = blocks[i].category;
+
+      if (block.viewblock) {
+        viewblockArray = block.viewblock;
+        if(typeof block.viewblock == "function") {
+          viewblockArray = block.viewblock();
+        }
+        createOption(viewblockArray, name);
+      }
+    }
+
+    function createOption(vb, canonicName) {
+      if (vb) {
+        goog.array.forEach(vb, function(dd) {
+          var dropDownValues = {};
+          var mutatorAttributes = {};
+          if (dd.dropDown) {
+            if (dd.dropDown.titleName && dd.dropDown.value) {
+              dropDownValues.titlename = dd.dropDown.titleName;
+              dropDownValues.value = dd.dropDown.value;
+            }
+            else {
+              throw new Error('ViewBlock not correctly set up for ' + canonicName);
+            }
+          }
+          if (dd.mutatorAttributes) {
+            mutatorAttributes = dd.mutatorAttributes;
+          }
+          if (dd.mutatorAttributes) {
+            mutatorAttributes = dd.mutatorAttributes;
+          }
+          listOfOptions[dd.translatedName] = {
+            canonicName: canonicName,
+            dropDown: dropDownValues,
+            mutatorAttributes: mutatorAttributes
+          };
+        });
+      }  
+    }
+
+    return listOfOptions;
+  };
+
+  //This is called once on startup and then called on demand
+  Blockly.ViewBlock.VBOptions_ = buildListOfOptions();
+};
+
+/**
+ * This function reloads all the latest changes that might have occurred in the language tree or
+ * the structures containing procedures and variables. It only needs to be called once even if
+ * different sources are being updated at the same time (call on load proc, load vars, and generate
+ * options, only needs one call of this function; and example of that is lazyLoadOfOptions_
+ * @private
+ */
+Blockly.ViewBlock.reloadOptionsAfterChanges_ = function () {
+  Blockly.ViewBlock.VBOptionsNames_ = goog.object.getKeys(Blockly.ViewBlock.VBOptions_);
+  goog.array.sort(Blockly.ViewBlock.VBOptionsNames_);
+  Blockly.ViewBlock.ac_.matcher_.setRows(Blockly.ViewBlock.VBOptionsNames_);
+};
+
+
+
+/**
+ * Creates the auto-complete panel, powered by Google Closure's ac widget
+ * @private
+ */
+Blockly.ViewBlock.createAutoComplete_ = function(inputText){
+  Blockly.ViewBlock.VBOptionsNames_ = goog.object.getKeys( Blockly.ViewBlock.VBOptions_ );
+  goog.array.sort(Blockly.ViewBlock.VBOptionsNames_);
+  goog.events.unlistenByKey(Blockly.ViewBlock.currentListener_); //if there is a key, unlisten
+  if (Blockly.ViewBlock.ac_)
+    Blockly.ViewBlock.ac_.dispose(); //Make sure we only have 1 at a time
+
+  // 3 objects needed to create a goog.ui.ac.AutoComplete instance
+  var matcher = new Blockly.ViewBlock.ac.AIArrayMatcher(Blockly.ViewBlock.VBOptionsNames_, false);
+  var renderer = new goog.ui.ac.Renderer();
+  var inputHandler = new goog.ui.ac.InputHandler(null, null, false);
+
+  Blockly.ViewBlock.ac_ = new goog.ui.ac.AutoComplete(matcher, renderer, inputHandler);
+  Blockly.ViewBlock.ac_.setMaxMatches(100); //Renderer has a set height of 294px and a scroll bar.
+  inputHandler.attachAutoComplete(Blockly.ViewBlock.ac_);
+  inputHandler.attachInputs(goog.dom.getElement(inputText));
+
+  Blockly.ViewBlock.currentListener_ = goog.events.listen(Blockly.ViewBlock.ac_,
+      goog.ui.ac.AutoComplete.EventType.UPDATE,
+
+    function() {
+      var blockName = goog.dom.getElement(inputText).value;
+      var blocksToView = goog.object.get(Blockly.TypeBlock.TBOptions_, blockName);
+      //filter by? should return a list
+      if (!blocksToView) {
+       //TODO
+      }
+
+/******** NOT QUITE SURE */
+      //all current blocks
+      var blocks = Blockly.mainWorkspace.getAllBlocks;
+      //filtered = blocksToView;
+
+      //for all that are not filtered --> hide
+      //show all that are filtered
+/*******************/
+
+      //rearrange workspace
+      //similar to rearrange in blockly.js
+      
+      Blockly.WarningHandler.checkAllBlocksForWarningsAndErrors();      
+    }
+  );
+};
+
+
+//--------------------------------------
+// A custom matcher for the auto-complete widget that can handle numbers as well as the default
+// functionality of goog.ui.ac.ArrayMatcher
+goog.provide('Blockly.ViewBlock.ac.AIArrayMatcher');
+
+goog.require('goog.iter');
+goog.require('goog.string');
+
+/**
+ * Extension of goog.ui.ac.ArrayMatcher so that it can handle any number typed in.
+ * @constructor
+ * @param {Array} rows Dictionary of items to match.  Can be objects if they
+ * have a toString method that returns the value to match against.
+ * @param {boolean=} opt_noSimilar if true, do not do similarity matches for the
+ * input token against the dictionary.
+ * @extends {goog.ui.ac.ArrayMatcher}
+ */
+Blockly.ViewBlock.ac.AIArrayMatcher = function(rows, opt_noSimilar) {
+  goog.ui.ac.ArrayMatcher.call(rows, opt_noSimilar);
+  this.rows_ = rows;
+  this.useSimilar_ = !opt_noSimilar;
+};
+goog.inherits(Blockly.ViewBlock.ac.AIArrayMatcher, goog.ui.ac.ArrayMatcher);
+
+/**
+ * @inheritDoc
+ */
+Blockly.ViewBlock.ac.AIArrayMatcher.prototype.requestMatchingRows = function(token, maxMatches,
+    matchHandler, opt_fullString) {
+
+  var matches = this.getPrefixMatches(token, maxMatches);
+
+  //Because we allow for similar matches, Button.Text will always appear before Text
+  //So we handle the 'text' case as a special case here
+  if (token === 'text' || token === 'Text'){
+    goog.array.remove(matches, 'Text');
+    goog.array.insertAt(matches, 'Text', 0);
+  }
+
+  // Added code to handle any number typed in the widget (including negatives and decimals)
+  var reg = new RegExp('^-?[0-9]\\d*(\.\\d+)?$', 'g');
+  var match = reg.exec(token);
+  if (match && match.length > 0){
+    matches.push(token);
+  }
+
+  // Added code to handle default values for text fields (they start with " or ')
+  var textReg = new RegExp('^[\"|\']+', 'g');
+  var textMatch = textReg.exec(token);
+  if (textMatch && textMatch.length === 1){
+    matches.push(token);
+  }
+
+  if (matches.length === 0 && this.useSimilar_) {
+    matches = this.getSimilarRows(token, maxMatches);
+  }
+
+  matchHandler(token, matches);
 };
