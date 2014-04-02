@@ -327,16 +327,91 @@ Blockly.ViewBlock.createAutoComplete_ = function(inputText){
       }
 
 /******** NOT QUITE SURE */
+      //check if is in list
+      function isIn(block, list) {
+        for (i in list) {
+          if (block == list[i]) {
+            return true;
+          }
+        }
+        return false;
+      }
+
       //all current blocks
-      var blocks = Blockly.mainWorkspace.getAllBlocks;
+      var blocksAll = Blockly.mainWorkspace.getAllBlocks; //returns as a list
+
+      for (block in blocksToView) {
+        if (!isIn(block, blocksAll)) {
+          block.hide();
+        } else {
+          block.show(); //show if not already shown
+        }
+      }
       //filtered = blocksToView;
 
       //for all that are not filtered --> hide
-      //show all that are filtered
 /*******************/
+      //call to rearrange workspace
 
-      //rearrange workspace
-      //similar to rearrange in blockly.js
+      function arrangeBlocks(layout) {
+        var SPACER = 25;
+        var topblocks = Blockly.mainWorkspace.getTopBlocks(false);
+        // If the blocks are arranged by Category, sort the array
+        if (Blockly.workspace_arranged_type === Blockly.BLKS_CATEGORY){
+          topblocks.sort(sortByCategory);
+        }
+        var metrics = Blockly.mainWorkspace.getMetrics();
+        var viewLeft = metrics.viewLeft + 5;
+        var viewTop = metrics.viewTop + 5;
+        var x = viewLeft;
+        var y = viewTop;
+        var wsRight = viewLeft + metrics.viewWidth;
+        var wsBottom = viewTop + metrics.viewHeight;
+        var maxHgt = 0;
+        var maxWidth = 0;
+        for (var i = 0, len = topblocks.length; i < len; i++) {
+          var blk = topblocks[i];
+          var blkXY = blk.getRelativeToSurfaceXY();
+          var blockHW = blk.getHeightWidth();
+          var blkHgt = blockHW.height;
+          var blkWidth = blockHW.width;
+          switch (layout) {
+            case Blockly.BLKS_HORIZONTAL:
+              if (x < wsRight) {
+                blk.moveBy(x - blkXY.x, y - blkXY.y);
+                blk.select();
+                x += blkWidth + SPACER;
+                if (blkHgt > maxHgt) // Remember highest block
+                  maxHgt = blkHgt;
+              } else {
+                y += maxHgt + SPACER;
+                maxHgt = blkHgt;
+                x = viewLeft;
+                blk.moveBy(x - blkXY.x, y - blkXY.y);
+                blk.select();
+                x += blkWidth + SPACER;
+              }
+              break;
+            case Blockly.BLKS_VERTICAL:
+              if (y < wsBottom) {
+                blk.moveBy(x - blkXY.x, y - blkXY.y);
+                blk.select();
+                y += blkHgt + SPACER;
+                if (blkWidth > maxWidth)  // Remember widest block
+                  maxWidth = blkWidth;
+              } else {
+                x += maxWidth + SPACER;
+                maxWidth = blkWidth;
+                y = viewTop;
+                blk.moveBy(x - blkXY.x, y - blkXY.y);
+                blk.select();
+                y += blkHgt + SPACER;
+              }
+              break;
+          }
+        }
+      }
+
       
       Blockly.WarningHandler.checkAllBlocksForWarningsAndErrors();      
     }
