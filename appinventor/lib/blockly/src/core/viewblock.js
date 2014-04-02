@@ -353,6 +353,7 @@ Blockly.ViewBlock.createAutoComplete_ = function(inputText){
 /*******************/
       //call to rearrange workspace
 
+      //arranges blocks in layout
       function arrangeBlocks(layout) {
         var SPACER = 25;
         var topblocks = Blockly.mainWorkspace.getTopBlocks(false);
