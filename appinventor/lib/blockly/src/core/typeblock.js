@@ -69,7 +69,7 @@ Blockly.TypeBlock = function( htmlConfig ){
       // Enter in the panel makes it select an option
       if (e.keyCode === 13) Blockly.TypeBlock.hide();
     }
-    else {
+    else if (!Blockly.ViewBlock.visible){
       Blockly.TypeBlock.show();
       // Can't seem to make Firefox display first character, so keep all browsers from automatically
       // displaying the first character and add it manually.
