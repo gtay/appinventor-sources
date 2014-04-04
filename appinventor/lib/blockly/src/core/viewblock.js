@@ -70,12 +70,11 @@ Blockly.ViewBlock = function( htmlConfig ){
       if (e.keyCode === 13) Blockly.ViewBlock.hide();
       //SELECT do select after enter
     }
-    
   };
 
- // goog.events.listen(Blockly.ViewBlock.docKh_, 'key', Blockly.ViewBlock.handleKey);
+  // goog.events.listen(Blockly.ViewBlock.docKh_, 'key', Blockly.ViewBlock.handleKey);
   // Create the auto-complete panel
-  //Blockly.ViewBlock.createAutoComplete_(Blockly.ViewBlock.inputText_);
+  // Blockly.ViewBlock.createAutoComplete_(Blockly.ViewBlock.inputText_);
 };
 
 
@@ -167,7 +166,7 @@ Blockly.ViewBlock.hide = function(){ //this should never be called
  * function to show the auto-complete panel to start typing block names
  */
 Blockly.ViewBlock.show = function(){
- // this.lazyLoadOfOptions_();
+  this.lazyLoadOfOptions_();
   var panel = goog.dom.getElement(Blockly.ViewBlock.viewBlockDiv_);
   goog.style.setStyle(panel, 'top', Blockly.latestClick.y);
   goog.style.setStyle(panel, 'left', Blockly.latestClick.x);
@@ -187,21 +186,18 @@ Blockly.ViewBlock.show = function(){
  * Defaults to true so that it loads the first time (set to null after loading in lazyLoadOfOptions_())
  * @type {{components: boolean}}
  */
- /*
 Blockly.ViewBlock.needsReload = {
   components: true
-};*/
+};
 
 /**
  * Lazily loading options because some of them are not available during bootstrapping, and some
  * users will never use this functionality, so we avoid having to deal with changes such as handling
  * renaming of variables and procedures (leaving it until the moment they are used, if ever).
  * @private
- */
-
- /*
+ */ 
 Blockly.ViewBlock.lazyLoadOfOptions_ = function () {
-
+  console.log('LazyLoadOfOptions'); 
   // Optimisation to avoid reloading all components and built-in objects unless it is needed.
   // needsReload.components is setup when adding/renaming/removing a component in components.js
   if (this.needsReload.components){
@@ -210,8 +206,8 @@ Blockly.ViewBlock.lazyLoadOfOptions_ = function () {
   }
   //Blockly.ViewBlock.loadGlobalVariables_();
   //Blockly.ViewBlock.loadProcedures_();
-  this.reloadOptionsAfterChanges_();
-}; */
+  // this.reloadOptionsAfterChanges_();
+}; 
 
 /**
  * This function traverses all blocks in the workspace and re-creates all the options
@@ -221,14 +217,14 @@ Blockly.ViewBlock.lazyLoadOfOptions_ = function () {
  *
  * call 'reloadOptionsAfterChanges_' after calling this. The function lazyLoadOfOptions_ is an
  * example of how to call this function.
- */
-
- /*
+ */ 
 Blockly.ViewBlock.generateOptions = function() {
+  console.log('generateOptions'); 
+
   var buildListOfOptions = function() {
     var listOfOptions = {};
     var viewblockArray;
-    var blocks = Blockly.mainWorkspace.getAllBlocks;
+    var blocks = Blockly.mainWorkspace.getAllBlocks();
     for (var i = 0; i < blocks.length; i++) {
       if (blocks[i].category === 'Component' && blocks[i].instanceName) {
         var block = blocks[i].instanceName;
@@ -238,6 +234,7 @@ Blockly.ViewBlock.generateOptions = function() {
         var block = blocks[i].value;
       } else {
         var block = blocks[i].category;
+      }
 
       if (block.viewblock) {
         viewblockArray = block.viewblock;
@@ -249,6 +246,7 @@ Blockly.ViewBlock.generateOptions = function() {
     }
 
     function createOption(vb, canonicName) {
+      console.log('create options'); 
       if (vb) {
         goog.array.forEach(vb, function(dd) {
           var dropDownValues = {};
@@ -265,9 +263,6 @@ Blockly.ViewBlock.generateOptions = function() {
           if (dd.mutatorAttributes) {
             mutatorAttributes = dd.mutatorAttributes;
           }
-          if (dd.mutatorAttributes) {
-            mutatorAttributes = dd.mutatorAttributes;
-          }
           listOfOptions[dd.translatedName] = {
             canonicName: canonicName,
             dropDown: dropDownValues,
@@ -276,7 +271,6 @@ Blockly.ViewBlock.generateOptions = function() {
         });
       }  
     }
-
     return listOfOptions;
   };
 
@@ -284,7 +278,7 @@ Blockly.ViewBlock.generateOptions = function() {
   Blockly.ViewBlock.VBOptions_ = buildListOfOptions();
 };
 
-*/
+
 
 /**
  * This function reloads all the latest changes that might have occurred in the language tree or
@@ -293,13 +287,11 @@ Blockly.ViewBlock.generateOptions = function() {
  * options, only needs one call of this function; and example of that is lazyLoadOfOptions_
  * @private
  */
-
- /*
-Blockly.ViewBlock.reloadOptionsAfterChanges_ = function () {
-  Blockly.ViewBlock.VBOptionsNames_ = goog.object.getKeys(Blockly.ViewBlock.VBOptions_);
-  goog.array.sort(Blockly.ViewBlock.VBOptionsNames_);
-  Blockly.ViewBlock.ac_.matcher_.setRows(Blockly.ViewBlock.VBOptionsNames_);
-}; */
+// Blockly.ViewBlock.reloadOptionsAfterChanges_ = function () {
+//   Blockly.ViewBlock.VBOptionsNames_ = goog.object.getKeys(Blockly.ViewBlock.VBOptions_);
+//   goog.array.sort(Blockly.ViewBlock.VBOptionsNames_);
+//   Blockly.ViewBlock.ac_.matcher_.setRows(Blockly.ViewBlock.VBOptionsNames_);
+// }; 
 
 
 
@@ -307,140 +299,133 @@ Blockly.ViewBlock.reloadOptionsAfterChanges_ = function () {
  * Creates the auto-complete panel, powered by Google Closure's ac widget
  * @private
  */
+// Blockly.ViewBlock.createAutoComplete_ = function(inputText){
+//   Blockly.ViewBlock.VBOptionsNames_ = goog.object.getKeys( Blockly.ViewBlock.VBOptions_ );
+//   goog.array.sort(Blockly.ViewBlock.VBOptionsNames_);
+//   goog.events.unlistenByKey(Blockly.ViewBlock.currentListener_); //if there is a key, unlisten
+//   if (Blockly.ViewBlock.ac_)
+//     Blockly.ViewBlock.ac_.dispose(); //Make sure we only have 1 at a time
 
- /*
-Blockly.ViewBlock.createAutoComplete_ = function(inputText){
-  Blockly.ViewBlock.VBOptionsNames_ = goog.object.getKeys( Blockly.ViewBlock.VBOptions_ );
-  goog.array.sort(Blockly.ViewBlock.VBOptionsNames_);
-  goog.events.unlistenByKey(Blockly.ViewBlock.currentListener_); //if there is a key, unlisten
-  if (Blockly.ViewBlock.ac_)
-    Blockly.ViewBlock.ac_.dispose(); //Make sure we only have 1 at a time
+//   // 3 objects needed to create a goog.ui.ac.AutoComplete instance
+//   var matcher = new Blockly.ViewBlock.ac.AIArrayMatcher(Blockly.ViewBlock.VBOptionsNames_, false);
+//   var renderer = new goog.ui.ac.Renderer();
+//   var inputHandler = new goog.ui.ac.InputHandler(null, null, false);
 
-  // 3 objects needed to create a goog.ui.ac.AutoComplete instance
-  var matcher = new Blockly.ViewBlock.ac.AIArrayMatcher(Blockly.ViewBlock.VBOptionsNames_, false);
-  var renderer = new goog.ui.ac.Renderer();
-  var inputHandler = new goog.ui.ac.InputHandler(null, null, false);
+//   Blockly.ViewBlock.ac_ = new goog.ui.ac.AutoComplete(matcher, renderer, inputHandler);
+//   Blockly.ViewBlock.ac_.setMaxMatches(100); //Renderer has a set height of 294px and a scroll bar.
+//   inputHandler.attachAutoComplete(Blockly.ViewBlock.ac_);
+//   inputHandler.attachInputs(goog.dom.getElement(inputText));
 
-  Blockly.ViewBlock.ac_ = new goog.ui.ac.AutoComplete(matcher, renderer, inputHandler);
-  Blockly.ViewBlock.ac_.setMaxMatches(100); //Renderer has a set height of 294px and a scroll bar.
-  inputHandler.attachAutoComplete(Blockly.ViewBlock.ac_);
-  inputHandler.attachInputs(goog.dom.getElement(inputText));
+//   Blockly.ViewBlock.currentListener_ = goog.events.listen(Blockly.ViewBlock.ac_,
+//       goog.ui.ac.AutoComplete.EventType.UPDATE,
+//     function() {
+//       var blockName = goog.dom.getElement(inputText).value;
+//       var blocksToView = goog.object.get(Blockly.ViewBlock.VBOptions_, blockName);
+//       //filter by? should return a list
+//       if (!blocksToView) {
+//        //TODO
+//       }
 
-  Blockly.ViewBlock.currentListener_ = goog.events.listen(Blockly.ViewBlock.ac_,
-      goog.ui.ac.AutoComplete.EventType.UPDATE,
+//       // NOT QUITE SURE 
+//       //check if is in list
+//       function isIn(block, list) {
+//         for (i in list) {
+//           if (block == list[i]) {
+//             return true;
+//           }
+//         }
+//         return false;
+//       }
 
-    function() {
-      var blockName = goog.dom.getElement(inputText).value;
-      var blocksToView = goog.object.get(Blockly.ViewBlock.VBOptions_, blockName);
-      //filter by? should return a list
-      if (!blocksToView) {
-       //TODO
-      }
+//       //all current blocks
+//       var blocksAll = Blockly.mainWorkspace.getAllBlocks; //returns as a list
 
-// NOT QUITE SURE 
-      //check if is in list
-      function isIn(block, list) {
-        for (i in list) {
-          if (block == list[i]) {
-            return true;
-          }
-        }
-        return false;
-      }
+//       for (block in blocksToView) {
+//         if (!isIn(block, blocksAll)) {
+//           block.hide();
+//         } else {
+//           block.show(); //show if not already shown
+//         }
+//       }
+//       //filtered = blocksToView;
 
-      //all current blocks
-      var blocksAll = Blockly.mainWorkspace.getAllBlocks; //returns as a list
+//       //for all that are not filtered --> hide
+// //
+//       //call to rearrange workspace
 
-      for (block in blocksToView) {
-        if (!isIn(block, blocksAll)) {
-          block.hide();
-        } else {
-          block.show(); //show if not already shown
-        }
-      }
-      //filtered = blocksToView;
-
-      //for all that are not filtered --> hide
-//
-      //call to rearrange workspace
-
-      //arranges blocks in layout
-      function arrangeBlocks(layout) {
-        var SPACER = 25;
-        var topblocks = Blockly.mainWorkspace.getTopBlocks(false);
-        // If the blocks are arranged by Category, sort the array
-        if (Blockly.workspace_arranged_type === Blockly.BLKS_CATEGORY){
-          topblocks.sort(sortByCategory);
-        }
-        var metrics = Blockly.mainWorkspace.getMetrics();
-        var viewLeft = metrics.viewLeft + 5;
-        var viewTop = metrics.viewTop + 5;
-        var x = viewLeft;
-        var y = viewTop;
-        var wsRight = viewLeft + metrics.viewWidth;
-        var wsBottom = viewTop + metrics.viewHeight;
-        var maxHgt = 0;
-        var maxWidth = 0;
-        for (var i = 0, len = topblocks.length; i < len; i++) {
-          var blk = topblocks[i];
-          var blkXY = blk.getRelativeToSurfaceXY();
-          var blockHW = blk.getHeightWidth();
-          var blkHgt = blockHW.height;
-          var blkWidth = blockHW.width;
-          switch (layout) {
-            case Blockly.BLKS_HORIZONTAL:
-              if (x < wsRight) {
-                blk.moveBy(x - blkXY.x, y - blkXY.y);
-                blk.select();
-                x += blkWidth + SPACER;
-                if (blkHgt > maxHgt) // Remember highest block
-                  maxHgt = blkHgt;
-              } else {
-                y += maxHgt + SPACER;
-                maxHgt = blkHgt;
-                x = viewLeft;
-                blk.moveBy(x - blkXY.x, y - blkXY.y);
-                blk.select();
-                x += blkWidth + SPACER;
-              }
-              break;
-            case Blockly.BLKS_VERTICAL:
-              if (y < wsBottom) {
-                blk.moveBy(x - blkXY.x, y - blkXY.y);
-                blk.select();
-                y += blkHgt + SPACER;
-                if (blkWidth > maxWidth)  // Remember widest block
-                  maxWidth = blkWidth;
-              } else {
-                x += maxWidth + SPACER;
-                maxWidth = blkWidth;
-                y = viewTop;
-                blk.moveBy(x - blkXY.x, y - blkXY.y);
-                blk.select();
-                y += blkHgt + SPACER;
-              }
-              break;
-          }
-        }
-      }
-
-      
-      Blockly.WarningHandler.checkAllBlocksForWarningsAndErrors();      
-    }
-  );
-};
-
-*/
+//       //arranges blocks in layout
+//       function arrangeBlocks(layout) {
+//         var SPACER = 25;
+//         var topblocks = Blockly.mainWorkspace.getTopBlocks(false);
+//         // If the blocks are arranged by Category, sort the array
+//         if (Blockly.workspace_arranged_type === Blockly.BLKS_CATEGORY){
+//           topblocks.sort(sortByCategory);
+//         }
+//         var metrics = Blockly.mainWorkspace.getMetrics();
+//         var viewLeft = metrics.viewLeft + 5;
+//         var viewTop = metrics.viewTop + 5;
+//         var x = viewLeft;
+//         var y = viewTop;
+//         var wsRight = viewLeft + metrics.viewWidth;
+//         var wsBottom = viewTop + metrics.viewHeight;
+//         var maxHgt = 0;
+//         var maxWidth = 0;
+//         for (var i = 0, len = topblocks.length; i < len; i++) {
+//           var blk = topblocks[i];
+//           var blkXY = blk.getRelativeToSurfaceXY();
+//           var blockHW = blk.getHeightWidth();
+//           var blkHgt = blockHW.height;
+//           var blkWidth = blockHW.width;
+//           switch (layout) {
+//             case Blockly.BLKS_HORIZONTAL:
+//               if (x < wsRight) {
+//                 blk.moveBy(x - blkXY.x, y - blkXY.y);
+//                 blk.select();
+//                 x += blkWidth + SPACER;
+//                 if (blkHgt > maxHgt) // Remember highest block
+//                   maxHgt = blkHgt;
+//               } else {
+//                 y += maxHgt + SPACER;
+//                 maxHgt = blkHgt;
+//                 x = viewLeft;
+//                 blk.moveBy(x - blkXY.x, y - blkXY.y);
+//                 blk.select();
+//                 x += blkWidth + SPACER;
+//               }
+//               break;
+//             case Blockly.BLKS_VERTICAL:
+//               if (y < wsBottom) {
+//                 blk.moveBy(x - blkXY.x, y - blkXY.y);
+//                 blk.select();
+//                 y += blkHgt + SPACER;
+//                 if (blkWidth > maxWidth)  // Remember widest block
+//                   maxWidth = blkWidth;
+//               } else {
+//                 x += maxWidth + SPACER;
+//                 maxWidth = blkWidth;
+//                 y = viewTop;
+//                 blk.moveBy(x - blkXY.x, y - blkXY.y);
+//                 blk.select();
+//                 y += blkHgt + SPACER;
+//               }
+//               break;
+//           }
+//         }
+//       }
+//       Blockly.WarningHandler.checkAllBlocksForWarningsAndErrors();      
+//     }
+//   );
+// };
 
 //--------------------------------------
 // A custom matcher for the auto-complete widget that can handle numbers as well as the default
 // functionality of goog.ui.ac.ArrayMatcher
-/*
-goog.provide('Blockly.ViewBlock.ac.AIArrayMatcher');
 
-goog.require('goog.iter');
-goog.require('goog.string');
-*/
+// goog.provide('Blockly.ViewBlock.ac.AIArrayMatcher');
+
+// goog.require('goog.iter');
+// goog.require('goog.string');
+
 /**
  * Extension of goog.ui.ac.ArrayMatcher so that it can handle any number typed in.
  * @constructor
@@ -451,45 +436,43 @@ goog.require('goog.string');
  * @extends {goog.ui.ac.ArrayMatcher}
  */
 
- /*
-Blockly.ViewBlock.ac.AIArrayMatcher = function(rows, opt_noSimilar) {
-  goog.ui.ac.ArrayMatcher.call(rows, opt_noSimilar);
-  this.rows_ = rows;
-  this.useSimilar_ = !opt_noSimilar;
-};
-goog.inherits(Blockly.ViewBlock.ac.AIArrayMatcher, goog.ui.ac.ArrayMatcher);
+// Blockly.ViewBlock.ac.AIArrayMatcher = function(rows, opt_noSimilar) {
+//   goog.ui.ac.ArrayMatcher.call(rows, opt_noSimilar);
+//   this.rows_ = rows;
+//   this.useSimilar_ = !opt_noSimilar;
+// };
+// goog.inherits(Blockly.ViewBlock.ac.AIArrayMatcher, goog.ui.ac.ArrayMatcher);
 
 
-Blockly.ViewBlock.ac.AIArrayMatcher.prototype.requestMatchingRows = function(token, maxMatches,
-    matchHandler, opt_fullString) {
+// Blockly.ViewBlock.ac.AIArrayMatcher.prototype.requestMatchingRows = function(token, maxMatches,
+//     matchHandler, opt_fullString) {
 
-  var matches = this.getPrefixMatches(token, maxMatches);
+//   var matches = this.getPrefixMatches(token, maxMatches);
 
-  //Because we allow for similar matches, Button.Text will always appear before Text
-  //So we handle the 'text' case as a special case here
-  if (token === 'text' || token === 'Text'){
-    goog.array.remove(matches, 'Text');
-    goog.array.insertAt(matches, 'Text', 0);
-  }
+//   //Because we allow for similar matches, Button.Text will always appear before Text
+//   //So we handle the 'text' case as a special case here
+//   if (token === 'text' || token === 'Text'){
+//     goog.array.remove(matches, 'Text');
+//     goog.array.insertAt(matches, 'Text', 0);
+//   }
 
-  // Added code to handle any number typed in the widget (including negatives and decimals)
-  var reg = new RegExp('^-?[0-9]\\d*(\.\\d+)?$', 'g');
-  var match = reg.exec(token);
-  if (match && match.length > 0){
-    matches.push(token);
-  }
+//   // Added code to handle any number typed in the widget (including negatives and decimals)
+//   var reg = new RegExp('^-?[0-9]\\d*(\.\\d+)?$', 'g');
+//   var match = reg.exec(token);
+//   if (match && match.length > 0){
+//     matches.push(token);
+//   }
 
-  // Added code to handle default values for text fields (they start with " or ')
-  var textReg = new RegExp('^[\"|\']+', 'g');
-  var textMatch = textReg.exec(token);
-  if (textMatch && textMatch.length === 1){
-    matches.push(token);
-  }
+//   // Added code to handle default values for text fields (they start with " or ')
+//   var textReg = new RegExp('^[\"|\']+', 'g');
+//   var textMatch = textReg.exec(token);
+//   if (textMatch && textMatch.length === 1){
+//     matches.push(token);
+//   }
 
-  if (matches.length === 0 && this.useSimilar_) {
-    matches = this.getSimilarRows(token, maxMatches);
-  }
+//   if (matches.length === 0 && this.useSimilar_) {
+//     matches = this.getSimilarRows(token, maxMatches);
+//   }
 
-  matchHandler(token, matches);
-};
-*/
+//   matchHandler(token, matches);
+// };
