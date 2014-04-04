@@ -129,7 +129,7 @@ Blockly.ViewBlock.visible = false; //should make it true
 Blockly.ViewBlock.VBOptions_ = {};
 
 /**
- * This array contains only the Keys of Blockly.ViewBlock.TBOptions_ to be used
+ * This array contains only the Keys of Blockly.ViewBlock.VBOptions_ to be used
  * as options in the autocomplete widget.
  * @private
  */
@@ -187,9 +187,10 @@ Blockly.ViewBlock.show = function(){
  * Defaults to true so that it loads the first time (set to null after loading in lazyLoadOfOptions_())
  * @type {{components: boolean}}
  */
+ /*
 Blockly.ViewBlock.needsReload = {
   components: true
-};
+};*/
 
 /**
  * Lazily loading options because some of them are not available during bootstrapping, and some
@@ -197,6 +198,8 @@ Blockly.ViewBlock.needsReload = {
  * renaming of variables and procedures (leaving it until the moment they are used, if ever).
  * @private
  */
+
+ /*
 Blockly.ViewBlock.lazyLoadOfOptions_ = function () {
 
   // Optimisation to avoid reloading all components and built-in objects unless it is needed.
@@ -208,10 +211,10 @@ Blockly.ViewBlock.lazyLoadOfOptions_ = function () {
   //Blockly.ViewBlock.loadGlobalVariables_();
   //Blockly.ViewBlock.loadProcedures_();
   this.reloadOptionsAfterChanges_();
-};
+}; */
 
 /**
- * This function traverses the Language tree and re-creates all the options
+ * This function traverses all blocks in the workspace and re-creates all the options
  * available for type blocking. It's needed in the case of modifying the
  * Language tree after its creation (adding or renaming components, for instance).
  * It also loads all the built-in blocks.
@@ -219,6 +222,8 @@ Blockly.ViewBlock.lazyLoadOfOptions_ = function () {
  * call 'reloadOptionsAfterChanges_' after calling this. The function lazyLoadOfOptions_ is an
  * example of how to call this function.
  */
+
+ /*
 Blockly.ViewBlock.generateOptions = function() {
   var buildListOfOptions = function() {
     var listOfOptions = {};
@@ -279,6 +284,8 @@ Blockly.ViewBlock.generateOptions = function() {
   Blockly.ViewBlock.VBOptions_ = buildListOfOptions();
 };
 
+*/
+
 /**
  * This function reloads all the latest changes that might have occurred in the language tree or
  * the structures containing procedures and variables. It only needs to be called once even if
@@ -286,11 +293,13 @@ Blockly.ViewBlock.generateOptions = function() {
  * options, only needs one call of this function; and example of that is lazyLoadOfOptions_
  * @private
  */
+
+ /*
 Blockly.ViewBlock.reloadOptionsAfterChanges_ = function () {
   Blockly.ViewBlock.VBOptionsNames_ = goog.object.getKeys(Blockly.ViewBlock.VBOptions_);
   goog.array.sort(Blockly.ViewBlock.VBOptionsNames_);
   Blockly.ViewBlock.ac_.matcher_.setRows(Blockly.ViewBlock.VBOptionsNames_);
-};
+}; */
 
 
 
@@ -298,6 +307,8 @@ Blockly.ViewBlock.reloadOptionsAfterChanges_ = function () {
  * Creates the auto-complete panel, powered by Google Closure's ac widget
  * @private
  */
+
+ /*
 Blockly.ViewBlock.createAutoComplete_ = function(inputText){
   Blockly.ViewBlock.VBOptionsNames_ = goog.object.getKeys( Blockly.ViewBlock.VBOptions_ );
   goog.array.sort(Blockly.ViewBlock.VBOptionsNames_);
@@ -320,13 +331,13 @@ Blockly.ViewBlock.createAutoComplete_ = function(inputText){
 
     function() {
       var blockName = goog.dom.getElement(inputText).value;
-      var blocksToView = goog.object.get(Blockly.TypeBlock.TBOptions_, blockName);
+      var blocksToView = goog.object.get(Blockly.ViewBlock.VBOptions_, blockName);
       //filter by? should return a list
       if (!blocksToView) {
        //TODO
       }
 
-/******** NOT QUITE SURE */
+// NOT QUITE SURE 
       //check if is in list
       function isIn(block, list) {
         for (i in list) {
@@ -350,7 +361,7 @@ Blockly.ViewBlock.createAutoComplete_ = function(inputText){
       //filtered = blocksToView;
 
       //for all that are not filtered --> hide
-/*******************/
+//
       //call to rearrange workspace
 
       //arranges blocks in layout
@@ -419,15 +430,17 @@ Blockly.ViewBlock.createAutoComplete_ = function(inputText){
   );
 };
 
+*/
 
 //--------------------------------------
 // A custom matcher for the auto-complete widget that can handle numbers as well as the default
 // functionality of goog.ui.ac.ArrayMatcher
+/*
 goog.provide('Blockly.ViewBlock.ac.AIArrayMatcher');
 
 goog.require('goog.iter');
 goog.require('goog.string');
-
+*/
 /**
  * Extension of goog.ui.ac.ArrayMatcher so that it can handle any number typed in.
  * @constructor
@@ -437,6 +450,8 @@ goog.require('goog.string');
  * input token against the dictionary.
  * @extends {goog.ui.ac.ArrayMatcher}
  */
+
+ /*
 Blockly.ViewBlock.ac.AIArrayMatcher = function(rows, opt_noSimilar) {
   goog.ui.ac.ArrayMatcher.call(rows, opt_noSimilar);
   this.rows_ = rows;
@@ -444,9 +459,7 @@ Blockly.ViewBlock.ac.AIArrayMatcher = function(rows, opt_noSimilar) {
 };
 goog.inherits(Blockly.ViewBlock.ac.AIArrayMatcher, goog.ui.ac.ArrayMatcher);
 
-/**
- * @inheritDoc
- */
+
 Blockly.ViewBlock.ac.AIArrayMatcher.prototype.requestMatchingRows = function(token, maxMatches,
     matchHandler, opt_fullString) {
 
@@ -479,3 +492,4 @@ Blockly.ViewBlock.ac.AIArrayMatcher.prototype.requestMatchingRows = function(tok
 
   matchHandler(token, matches);
 };
+*/
