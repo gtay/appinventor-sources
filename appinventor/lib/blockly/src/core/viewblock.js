@@ -74,7 +74,7 @@ Blockly.ViewBlock = function( htmlConfig ){
 
   // goog.events.listen(Blockly.ViewBlock.docKh_, 'key', Blockly.ViewBlock.handleKey);
   // Create the auto-complete panel
-  // Blockly.ViewBlock.createAutoComplete_(Blockly.ViewBlock.inputText_);
+  Blockly.ViewBlock.createAutoComplete_(Blockly.ViewBlock.inputText_);
 };
 
 
@@ -175,7 +175,7 @@ Blockly.ViewBlock.show = function(){
   // If the input gets cleaned before adding the handler, all keys are read
   // correctly (at times it was missing the first char)
   goog.dom.getElement(Blockly.ViewBlock.inputText_).value = '';
-  //goog.events.unlisten(Blockly.ViewBlock.docKh_, 'key', Blockly.ViewBlock.handleKey);
+  // goog.events.unlisten(Blockly.ViewBlock.docKh_, 'key', Blockly.ViewBlock.handleKey);
   goog.events.listen(Blockly.ViewBlock.inputKh_, 'key', Blockly.ViewBlock.handleKey);
   Blockly.ViewBlock.visible = true;
 };
@@ -206,7 +206,7 @@ Blockly.ViewBlock.lazyLoadOfOptions_ = function () {
   }
   //Blockly.ViewBlock.loadGlobalVariables_();
   //Blockly.ViewBlock.loadProcedures_();
-  // this.reloadOptionsAfterChanges_();
+  this.reloadOptionsAfterChanges_();
 }; 
 
 /**
@@ -225,42 +225,48 @@ Blockly.ViewBlock.generateOptions = function() {
     var listOfOptions = {};
     var viewblockArray;
     var blocks = Blockly.mainWorkspace.getAllBlocks();
-    for (var i = 0; i < blocks.length; i++) {
-      if (blocks[i].category === 'Component' && blocks[i].instanceName) {
-        var block = blocks[i].instanceName;
-      } else if (blocks[i].category === 'Procedures') {
-        var block = (blocks[i].getTitleValue('NAME') || blocks[i].getTitleValue('PROCNAME'));
-      } else if (blocks[i].category === 'Text') {
-        var block = blocks[i].value;
+    for (var i = 0; i < blocks.length; i++) {      
+      block = blocks[i]; 
+      if (block.category === 'Component' && block.instanceName) {
+        var name = block.instanceName;
+      } else if (block.category === 'Procedures') {
+        var name = (block.getTitleValue('NAME') || block.getTitleValue('PROCNAME'));
+      } else if (block.category === 'Text') {
+        var name = block.value;
       } else {
-        var block = blocks[i].category;
+        var name = block.category;
       }
 
-      if (block.viewblock) {
-        viewblockArray = block.viewblock;
-        if(typeof block.viewblock == "function") {
-          viewblockArray = block.viewblock();
+      // apples and oranges here, need to get the name of the block 
+      // why is this shit called typeblock? what's involvement? 
+      if (block.typeblock) {
+        
+        console.log(block.toString()); 
+        
+        typeblockArray = block.typeblock;
+        if(typeof block.typeblock == "function") {
+          typeblockArray = block.typeblock();
         }
-        createOption(viewblockArray, name);
+        createOption(typeblockArray, name);
       }
     }
 
-    function createOption(vb, canonicName) {
-      console.log('create options'); 
-      if (vb) {
-        goog.array.forEach(vb, function(dd) {
+    function createOption(tb, canonicName){
+      console.log('createOption'); 
+      if (tb){
+        goog.array.forEach(tb, function(dd){
           var dropDownValues = {};
           var mutatorAttributes = {};
-          if (dd.dropDown) {
-            if (dd.dropDown.titleName && dd.dropDown.value) {
-              dropDownValues.titlename = dd.dropDown.titleName;
+          if (dd.dropDown){
+            if (dd.dropDown.titleName && dd.dropDown.value){
+              dropDownValues.titleName = dd.dropDown.titleName;
               dropDownValues.value = dd.dropDown.value;
             }
             else {
-              throw new Error('ViewBlock not correctly set up for ' + canonicName);
+              throw new Error('TypeBlock not correctly set up for ' + canonicName);
             }
           }
-          if (dd.mutatorAttributes) {
+          if(dd.mutatorAttributes) {
             mutatorAttributes = dd.mutatorAttributes;
           }
           listOfOptions[dd.translatedName] = {
@@ -269,15 +275,18 @@ Blockly.ViewBlock.generateOptions = function() {
             mutatorAttributes: mutatorAttributes
           };
         });
-      }  
+      }
     }
     return listOfOptions;
   };
 
   //This is called once on startup and then called on demand
   Blockly.ViewBlock.VBOptions_ = buildListOfOptions();
-};
 
+  console.log('here'); 
+  console.log(Object.keys(Blockly.ViewBlock.VBOptionsNames_).length.toString()); 
+
+};
 
 
 /**
@@ -287,13 +296,18 @@ Blockly.ViewBlock.generateOptions = function() {
  * options, only needs one call of this function; and example of that is lazyLoadOfOptions_
  * @private
  */
-// Blockly.ViewBlock.reloadOptionsAfterChanges_ = function () {
-//   Blockly.ViewBlock.VBOptionsNames_ = goog.object.getKeys(Blockly.ViewBlock.VBOptions_);
-//   goog.array.sort(Blockly.ViewBlock.VBOptionsNames_);
-//   Blockly.ViewBlock.ac_.matcher_.setRows(Blockly.ViewBlock.VBOptionsNames_);
-// }; 
+Blockly.ViewBlock.reloadOptionsAfterChanges_ = function () {
+  console.log('reloadOptionsAfterChanges_'); 
+  Blockly.ViewBlock.VBOptionsNames_ = goog.object.getKeys(Blockly.ViewBlock.VBOptions_);
 
+  console.log(Blockly.ViewBlock.VBOptionsNames_.length.toString());
+  for (var i=0; i < Blockly.ViewBlock.VBOptionsNames_.length; i++) { 
+    console.log(Blockly.ViewBlock.VBOptionsNames_[i]);
+  }
 
+  goog.array.sort(Blockly.ViewBlock.VBOptionsNames_);
+  Blockly.ViewBlock.ac_.matcher_.setRows(Blockly.ViewBlock.VBOptionsNames_);
+}; 
 
 /**
  * Creates the auto-complete panel, powered by Google Closure's ac widget
@@ -316,6 +330,7 @@ Blockly.ViewBlock.generateOptions = function() {
 //   inputHandler.attachAutoComplete(Blockly.ViewBlock.ac_);
 //   inputHandler.attachInputs(goog.dom.getElement(inputText));
 
+//   // fix this
 //   Blockly.ViewBlock.currentListener_ = goog.events.listen(Blockly.ViewBlock.ac_,
 //       goog.ui.ac.AutoComplete.EventType.UPDATE,
 //     function() {
@@ -352,7 +367,6 @@ Blockly.ViewBlock.generateOptions = function() {
 //       //for all that are not filtered --> hide
 // //
 //       //call to rearrange workspace
-
 //       //arranges blocks in layout
 //       function arrangeBlocks(layout) {
 //         var SPACER = 25;
@@ -416,15 +430,142 @@ Blockly.ViewBlock.generateOptions = function() {
 //     }
 //   );
 // };
+Blockly.ViewBlock.createAutoComplete_ = function(inputText){
+  console.log('creating autocomplete for viewblock'); 
+
+  Blockly.ViewBlock.VBOptionsNames_ = goog.object.getKeys( Blockly.ViewBlock.VBOptions_ );
+  goog.array.sort(Blockly.ViewBlock.VBOptionsNames_);
+  goog.events.unlistenByKey(Blockly.ViewBlock.currentListener_); //if there is a key, unlisten
+  if (Blockly.ViewBlock.ac_)
+    Blockly.ViewBlock.ac_.dispose(); //Make sure we only have 1 at a time
+
+
+  // for (var i=0; i < Blockly.ViewBlock.VBOptionsNames_.length; i++) { 
+  //   console.log(Blockly.ViewBlock.VBOptionsNames_[i]);
+  // }
+
+  // 3 objects needed to create a goog.ui.ac.AutoComplete instance
+  var matcher = new Blockly.ViewBlock.ac.AIArrayMatcher(Blockly.ViewBlock.VBOptionsNames_, false);
+  var renderer = new goog.ui.ac.Renderer();
+  var inputHandler = new goog.ui.ac.InputHandler(null, null, false);
+
+  Blockly.ViewBlock.ac_ = new goog.ui.ac.AutoComplete(matcher, renderer, inputHandler);
+  Blockly.ViewBlock.ac_.setMaxMatches(100); //Renderer has a set height of 294px and a scroll bar.
+  inputHandler.attachAutoComplete(Blockly.ViewBlock.ac_);
+  inputHandler.attachInputs(goog.dom.getElement(inputText));
+
+  Blockly.ViewBlock.currentListener_ = goog.events.listen(Blockly.ViewBlock.ac_,
+      goog.ui.ac.AutoComplete.EventType.UPDATE,
+    function() {
+      var blockName = goog.dom.getElement(inputText).value;
+      var blockToCreate = goog.object.get(Blockly.ViewBlock.VBOptions_, blockName);
+      if (!blockToCreate) {
+        //If the input passed is not a block, check if it is a number or a pre-populated text block
+        var numberReg = new RegExp('^-?[0-9]\\d*(\.\\d+)?$', 'g');
+        var numberMatch = numberReg.exec(blockName);
+        var textReg = new RegExp('^[\"|\']+', 'g');
+        var textMatch = textReg.exec(blockName);
+        if (numberMatch && numberMatch.length > 0){
+          blockToCreate = {
+            canonicName: 'math_number',
+            dropDown: {
+              titleName: 'NUM',
+              value: blockName
+            }
+          };
+        }
+        else if (textMatch && textMatch.length === 1){
+          blockToCreate = {
+            canonicName: 'text',
+            dropDown: {
+              titleName: 'TEXT',
+              value: blockName.substring(1)
+            }
+          };
+        }
+        else
+          return; // block does not exist: return
+      }
+
+      var blockToCreateName = '';
+      var block;
+      if (blockToCreate.dropDown){ //All blocks should have a dropDown property, even if empty
+        blockToCreateName = blockToCreate.canonicName;
+        // components have mutator attributes we need to deal with. We can also add these for special blocks
+        //   e.g., this is done for create empty list
+        if(!goog.object.isEmpty(blockToCreate.mutatorAttributes)) {
+          //construct xml
+          var xmlString = '<xml><block type="' + blockToCreateName + '"><mutation ';
+          for(var attributeName in blockToCreate.mutatorAttributes) {
+            xmlString += attributeName + '="' + blockToCreate.mutatorAttributes[attributeName] + '" ';
+          }
+
+          xmlString += '>';
+          xmlString += '</mutation></block></xml>';
+          var xml = Blockly.Xml.textToDom(xmlString);
+          block = Blockly.Xml.domToBlock_(Blockly.mainWorkspace, xml.firstChild);
+        } else {
+          block = new Blockly.Block(Blockly.mainWorkspace, blockToCreateName);
+          block.initSvg(); //Need to init the block before doing anything else
+          if (block.type && (block.type == "procedures_callnoreturn" || block.type == "procedures_callreturn")) {
+            //Need to make sure Procedure Block inputs are updated
+            Blockly.FieldProcedure.onChange.call(block.getTitle_("PROCNAME"), blockToCreate.dropDown.value);
+          }
+        }
+
+        if (blockToCreate.dropDown.titleName && blockToCreate.dropDown.value){
+          block.setTitleValue(blockToCreate.dropDown.value, blockToCreate.dropDown.titleName);
+          // change type checking for split blocks
+          if(blockToCreate.dropDown.value == 'SPLITATFIRST' || blockToCreate.dropDown.value == 'SPLIT') {
+            block.getInput("AT").setCheck(Blockly.Language.YailTypeToBlocklyType("text",Blockly.Language.INPUT));
+          } else if(blockToCreate.dropDown.value == 'SPLITATFIRSTOFANY' || blockToCreate.dropDown.value == 'SPLITATANY') {
+            block.getInput("AT").setCheck(Blockly.Language.YailTypeToBlocklyType("list",Blockly.Language.INPUT));
+          }
+        }
+      } else {
+        throw new Error('Type Block not correctly set up for: ' + blockToCreateName);
+      }
+      Blockly.WarningHandler.checkAllBlocksForWarningsAndErrors();
+      block.render();
+      var blockSelected = Blockly.selected;
+      var selectedX, selectedY, selectedXY;
+      if (blockSelected) {
+        selectedXY = blockSelected.getRelativeToSurfaceXY();
+        selectedX = selectedXY.x;
+        selectedY = selectedXY.y;
+        Blockly.ViewBlock.connectIfPossible(blockSelected, block);
+        if(!block.parentBlock_){
+          //Place it close but a bit out of the way from the one we created.
+          block.moveBy(Blockly.selected.getRelativeToSurfaceXY().x + 110,
+              Blockly.selected.getRelativeToSurfaceXY().y + 50);
+        }
+        block.select();
+      }
+      else {
+        //calculate positions relative to the view and the latest click
+        var left = Blockly.mainWorkspace.getMetrics().viewLeft +
+            Blockly.latestClick.x;
+        var top = Blockly.mainWorkspace.getMetrics().viewTop +
+            Blockly.latestClick.y;
+        block.moveBy(left, top);
+        block.select();
+      }
+      Blockly.ViewBlock.hide();
+    }
+  );
+};
+
+
+
 
 //--------------------------------------
 // A custom matcher for the auto-complete widget that can handle numbers as well as the default
 // functionality of goog.ui.ac.ArrayMatcher
 
-// goog.provide('Blockly.ViewBlock.ac.AIArrayMatcher');
+goog.provide('Blockly.ViewBlock.ac.AIArrayMatcher');
 
-// goog.require('goog.iter');
-// goog.require('goog.string');
+goog.require('goog.iter');
+goog.require('goog.string');
 
 /**
  * Extension of goog.ui.ac.ArrayMatcher so that it can handle any number typed in.
@@ -435,44 +576,43 @@ Blockly.ViewBlock.generateOptions = function() {
  * input token against the dictionary.
  * @extends {goog.ui.ac.ArrayMatcher}
  */
+Blockly.ViewBlock.ac.AIArrayMatcher = function(rows, opt_noSimilar) {
+  goog.ui.ac.ArrayMatcher.call(rows, opt_noSimilar);
+  this.rows_ = rows;
+  this.useSimilar_ = !opt_noSimilar;
+};
+goog.inherits(Blockly.ViewBlock.ac.AIArrayMatcher, goog.ui.ac.ArrayMatcher);
 
-// Blockly.ViewBlock.ac.AIArrayMatcher = function(rows, opt_noSimilar) {
-//   goog.ui.ac.ArrayMatcher.call(rows, opt_noSimilar);
-//   this.rows_ = rows;
-//   this.useSimilar_ = !opt_noSimilar;
-// };
-// goog.inherits(Blockly.ViewBlock.ac.AIArrayMatcher, goog.ui.ac.ArrayMatcher);
 
+Blockly.ViewBlock.ac.AIArrayMatcher.prototype.requestMatchingRows = function(token, maxMatches,
+    matchHandler, opt_fullString) {
 
-// Blockly.ViewBlock.ac.AIArrayMatcher.prototype.requestMatchingRows = function(token, maxMatches,
-//     matchHandler, opt_fullString) {
+  var matches = this.getPrefixMatches(token, maxMatches);
 
-//   var matches = this.getPrefixMatches(token, maxMatches);
+  //Because we allow for similar matches, Button.Text will always appear before Text
+  //So we handle the 'text' case as a special case here
+  if (token === 'text' || token === 'Text'){
+    goog.array.remove(matches, 'Text');
+    goog.array.insertAt(matches, 'Text', 0);
+  }
 
-//   //Because we allow for similar matches, Button.Text will always appear before Text
-//   //So we handle the 'text' case as a special case here
-//   if (token === 'text' || token === 'Text'){
-//     goog.array.remove(matches, 'Text');
-//     goog.array.insertAt(matches, 'Text', 0);
-//   }
+  // Added code to handle any number typed in the widget (including negatives and decimals)
+  var reg = new RegExp('^-?[0-9]\\d*(\.\\d+)?$', 'g');
+  var match = reg.exec(token);
+  if (match && match.length > 0){
+    matches.push(token);
+  }
 
-//   // Added code to handle any number typed in the widget (including negatives and decimals)
-//   var reg = new RegExp('^-?[0-9]\\d*(\.\\d+)?$', 'g');
-//   var match = reg.exec(token);
-//   if (match && match.length > 0){
-//     matches.push(token);
-//   }
+  // Added code to handle default values for text fields (they start with " or ')
+  var textReg = new RegExp('^[\"|\']+', 'g');
+  var textMatch = textReg.exec(token);
+  if (textMatch && textMatch.length === 1){
+    matches.push(token);
+  }
 
-//   // Added code to handle default values for text fields (they start with " or ')
-//   var textReg = new RegExp('^[\"|\']+', 'g');
-//   var textMatch = textReg.exec(token);
-//   if (textMatch && textMatch.length === 1){
-//     matches.push(token);
-//   }
+  if (matches.length === 0 && this.useSimilar_) {
+    matches = this.getSimilarRows(token, maxMatches);
+  }
 
-//   if (matches.length === 0 && this.useSimilar_) {
-//     matches = this.getSimilarRows(token, maxMatches);
-//   }
-
-//   matchHandler(token, matches);
-// };
+  matchHandler(token, matches);
+};
