@@ -225,8 +225,11 @@ Blockly.ViewBlock.generateOptions = function() {
     var listOfOptions = {};
     var viewblockArray;
     var blocks = Blockly.mainWorkspace.getAllBlocks();
+
+    // what are the values we need? 
     for (var i = 0; i < blocks.length; i++) {      
       block = blocks[i]; 
+      console.log(block); 
       if (block.category === 'Component' && block.instanceName) {
         var name = block.instanceName;
       } else if (block.category === 'Procedures') {
@@ -238,11 +241,9 @@ Blockly.ViewBlock.generateOptions = function() {
       }
 
       // apples and oranges here, need to get the name of the block 
-      // why is this shit called typeblock? what's involvement? 
-      if (block.typeblock) {
-        
-        console.log(block.toString()); 
-        
+      // why is this shit called typeblock? 
+      // hopefully can just avoid this with what's above  
+      if (block.typeblock) {       
         typeblockArray = block.typeblock;
         if(typeof block.typeblock == "function") {
           typeblockArray = block.typeblock();
@@ -251,6 +252,7 @@ Blockly.ViewBlock.generateOptions = function() {
       }
     }
 
+    // it would be nice to just eliminate this because avoids need for filtering 
     function createOption(tb, canonicName){
       console.log('createOption'); 
       if (tb){
@@ -274,6 +276,13 @@ Blockly.ViewBlock.generateOptions = function() {
             dropDown: dropDownValues,
             mutatorAttributes: mutatorAttributes
           };
+          // console.log('----------------------');
+          // // translated names are the ones you need to filter 
+          // // canonic names are just Button1 or Color or whatever
+          // console.log(dd.translatedName);
+          // console.log(canonicName);
+          // console.log(dropDownValues);
+          // console.log(mutatorAttributes);
         });
       }
     }
@@ -282,10 +291,8 @@ Blockly.ViewBlock.generateOptions = function() {
 
   //This is called once on startup and then called on demand
   Blockly.ViewBlock.VBOptions_ = buildListOfOptions();
-
-  console.log('here'); 
-  console.log(Object.keys(Blockly.ViewBlock.VBOptionsNames_).length.toString()); 
-
+  console.log('length of options: ' + Object.keys(Blockly.ViewBlock.VBOptions_).length.toString()); 
+  console.log(Blockly.ViewBlock.VBOptions_); 
 };
 
 
@@ -299,12 +306,6 @@ Blockly.ViewBlock.generateOptions = function() {
 Blockly.ViewBlock.reloadOptionsAfterChanges_ = function () {
   console.log('reloadOptionsAfterChanges_'); 
   Blockly.ViewBlock.VBOptionsNames_ = goog.object.getKeys(Blockly.ViewBlock.VBOptions_);
-
-  console.log(Blockly.ViewBlock.VBOptionsNames_.length.toString());
-  for (var i=0; i < Blockly.ViewBlock.VBOptionsNames_.length; i++) { 
-    console.log(Blockly.ViewBlock.VBOptionsNames_[i]);
-  }
-
   goog.array.sort(Blockly.ViewBlock.VBOptionsNames_);
   Blockly.ViewBlock.ac_.matcher_.setRows(Blockly.ViewBlock.VBOptionsNames_);
 }; 
@@ -438,11 +439,6 @@ Blockly.ViewBlock.createAutoComplete_ = function(inputText){
   goog.events.unlistenByKey(Blockly.ViewBlock.currentListener_); //if there is a key, unlisten
   if (Blockly.ViewBlock.ac_)
     Blockly.ViewBlock.ac_.dispose(); //Make sure we only have 1 at a time
-
-
-  // for (var i=0; i < Blockly.ViewBlock.VBOptionsNames_.length; i++) { 
-  //   console.log(Blockly.ViewBlock.VBOptionsNames_[i]);
-  // }
 
   // 3 objects needed to create a goog.ui.ac.AutoComplete instance
   var matcher = new Blockly.ViewBlock.ac.AIArrayMatcher(Blockly.ViewBlock.VBOptionsNames_, false);
