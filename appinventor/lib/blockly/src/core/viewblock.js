@@ -153,6 +153,7 @@ Blockly.ViewBlock.currentListener_ = null;
  * function to hide the autocomplete panel. Also used from hideChaff in
  * Blockly.js
  */
+// TODO: should we unarrange the workspace? 
 Blockly.ViewBlock.hide = function(){ //this should never be called
   if (Blockly.ViewBlock.viewBlockDiv_ == null)
     return;
@@ -224,67 +225,65 @@ Blockly.ViewBlock.generateOptions = function() {
   var buildListOfOptions = function() {
     var listOfOptions = {};
     var viewblockArray;
+    // get only top blocks to start with? 
     var blocks = Blockly.mainWorkspace.getAllBlocks();
 
     // what are the values we need? 
     for (var i = 0; i < blocks.length; i++) {      
       block = blocks[i]; 
+      var canonicName = ''; 
+      var translatedName = ''; 
       console.log(block); 
-      if (block.category === 'Component' && block.instanceName) {
-        var name = block.instanceName;
+
+      // if typeblock has more than one entry go for the last one
+      if (block.category === 'Component' && block.instanceName && block.setOrGet) {
+        canonicName = block.instanceName;
+        translatedName = block.setOrGet + ' ' + block.instanceName + '.' + block.propertyName; 
+
+      // is there anything but when? 
+      } else if (block.category === 'Component' && block.instanceName && block.blockType === 'event') { 
+        canonicName = block.instanceName; 
+        translatedName = "when " + block.instanceName + '.' + block.eventName; 
+
+      } else if (block.category === 'Component' && block.instanceName && block.methodName) { 
+        canonicName = block.instanceName; 
+        translatedName = "call " + block.instanceName + '.' + block.methodName; 
+
       } else if (block.category === 'Procedures') {
-        var name = (block.getTitleValue('NAME') || block.getTitleValue('PROCNAME'));
-      } else if (block.category === 'Text') {
-        var name = block.value;
+        canonicName = (block.getTitleValue('NAME') || block.getTitleValue('PROCNAME'));
+        translatedName = block.typeblock[0].translatedName; 
+
+      } else if (block.category === 'Control') {
+        // canonicName = (block.getTitleValue('NAME') || block.getTitleValue('PROCNAME'));
+        canonicName = block.category; 
+        translatedName = block.typeblock[0].translatedName; 
+
+      } else if (block.category === 'Text' || block.category === 'Colors') {
+        canonicName = block.category;
+        // but what if text upcase or downcase? 
+        translatedName = block.typeblock[0].translatedName; 
+
+      } else if (block.category === 'Variables') {
+        canonicName = block.category;
+        translatedName = block.typeblock[0].translatedName; 
+
       } else {
-        var name = block.category;
+        console.log('could not find for ' + block.category); 
       }
+      // event, event name 
+      // want blockType, get info based on that 
+      // eventName, methodName, getter/setter
+      // for built in blocks, work with the input lists (array has descriptions)? 
+      console.log(canonicName); 
+      console.log(translatedName); 
 
-      // apples and oranges here, need to get the name of the block 
-      // why is this shit called typeblock? 
-      // hopefully can just avoid this with what's above  
-      if (block.typeblock) {       
-        typeblockArray = block.typeblock;
-        if(typeof block.typeblock == "function") {
-          typeblockArray = block.typeblock();
-        }
-        createOption(typeblockArray, name);
-      }
-    }
-
-    // it would be nice to just eliminate this because avoids need for filtering 
-    function createOption(tb, canonicName){
-      console.log('createOption'); 
-      if (tb){
-        goog.array.forEach(tb, function(dd){
-          var dropDownValues = {};
-          var mutatorAttributes = {};
-          if (dd.dropDown){
-            if (dd.dropDown.titleName && dd.dropDown.value){
-              dropDownValues.titleName = dd.dropDown.titleName;
-              dropDownValues.value = dd.dropDown.value;
-            }
-            else {
-              throw new Error('TypeBlock not correctly set up for ' + canonicName);
-            }
-          }
-          if(dd.mutatorAttributes) {
-            mutatorAttributes = dd.mutatorAttributes;
-          }
-          listOfOptions[dd.translatedName] = {
+      if (canonicName !== '') { 
+          listOfOptions[translatedName] = {
             canonicName: canonicName,
-            dropDown: dropDownValues,
-            mutatorAttributes: mutatorAttributes
+            dropDown: {},
+            mutatorAttributes: {}
           };
-          // console.log('----------------------');
-          // // translated names are the ones you need to filter 
-          // // canonic names are just Button1 or Color or whatever
-          // console.log(dd.translatedName);
-          // console.log(canonicName);
-          // console.log(dropDownValues);
-          // console.log(mutatorAttributes);
-        });
-      }
+      } 
     }
     return listOfOptions;
   };
