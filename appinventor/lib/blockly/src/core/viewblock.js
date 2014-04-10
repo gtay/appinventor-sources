@@ -71,7 +71,6 @@ Blockly.ViewBlock = function( htmlConfig ){
       //SELECT do select after enter
     }
   };
-
   // goog.events.listen(Blockly.ViewBlock.docKh_, 'key', Blockly.ViewBlock.handleKey);
   // Create the auto-complete panel
   Blockly.ViewBlock.createAutoComplete_(Blockly.ViewBlock.inputText_);
@@ -198,7 +197,7 @@ Blockly.ViewBlock.needsReload = {
  * @private
  */ 
 Blockly.ViewBlock.lazyLoadOfOptions_ = function () {
-  console.log('LazyLoadOfOptions'); 
+  console.log('ViewBlock.LazyLoadOfOptions'); 
   // Optimisation to avoid reloading all components and built-in objects unless it is needed.
   // needsReload.components is setup when adding/renaming/removing a component in components.js
   if (this.needsReload.components){
@@ -220,7 +219,7 @@ Blockly.ViewBlock.lazyLoadOfOptions_ = function () {
  * example of how to call this function.
  */ 
 Blockly.ViewBlock.generateOptions = function() {
-  console.log('generateOptions'); 
+  console.log('ViewBlock.generateOptions'); 
 
   var buildListOfOptions = function() {
     var listOfOptions = {};
@@ -235,45 +234,29 @@ Blockly.ViewBlock.generateOptions = function() {
       var translatedName = ''; 
       console.log(block); 
 
-      // if typeblock has more than one entry go for the last one
-      if (block.category === 'Component' && block.instanceName && block.setOrGet) {
-        canonicName = block.instanceName;
+      if (block.category === 'Component' && block.setOrGet) {
+        canonicName = block.type;
         translatedName = block.setOrGet + ' ' + block.instanceName + '.' + block.propertyName; 
-
-      // is there anything but when? 
-      } else if (block.category === 'Component' && block.instanceName && block.blockType === 'event') { 
-        canonicName = block.instanceName; 
+      } else if (block.category === 'Component' && block.blockType === 'event') { 
+        canonicName = block.type; 
         translatedName = "when " + block.instanceName + '.' + block.eventName; 
-
-      } else if (block.category === 'Component' && block.instanceName && block.methodName) { 
-        canonicName = block.instanceName; 
+      } else if (block.category === 'Component' && block.methodName) { 
+        canonicName = block.type; 
         translatedName = "call " + block.instanceName + '.' + block.methodName; 
-
-      } else if (block.category === 'Procedures') {
-        canonicName = (block.getTitleValue('NAME') || block.getTitleValue('PROCNAME'));
-        translatedName = block.typeblock[0].translatedName; 
-
-      } else if (block.category === 'Control') {
-        // canonicName = (block.getTitleValue('NAME') || block.getTitleValue('PROCNAME'));
-        canonicName = block.category; 
-        translatedName = block.typeblock[0].translatedName; 
-
-      } else if (block.category === 'Text' || block.category === 'Colors') {
-        canonicName = block.category;
-        // but what if text upcase or downcase? 
-        translatedName = block.typeblock[0].translatedName; 
-
-      } else if (block.category === 'Variables') {
-        canonicName = block.category;
-        translatedName = block.typeblock[0].translatedName; 
-
-      } else {
-        console.log('could not find for ' + block.category); 
+      
+      // this is still wrong!!! 
+      // something with varibles here too? how do i generalize this??? 
+      } else if ((block.category === 'Text' || block.category === 'Variables') && block.inputList[0].titleRow[0].text_) { 
+        canonicName = block.type; 
+        translatedName = block.inputList[0].titleRow[0].text_.toLowerCase();
+      } else if (block.inputList[block.inputList.length-1].titleRow[0].text_) {
+        canonicName = block.type; 
+        translatedName = block.inputList[block.inputList.length-1].titleRow[0].text_.toLowerCase(); // don't know if lowercase is necessary 
+      
+      } else { 
+         throw new Error('Unable to parse canonicName and translatedName');
       }
-      // event, event name 
-      // want blockType, get info based on that 
-      // eventName, methodName, getter/setter
-      // for built in blocks, work with the input lists (array has descriptions)? 
+
       console.log(canonicName); 
       console.log(translatedName); 
 
@@ -287,11 +270,8 @@ Blockly.ViewBlock.generateOptions = function() {
     }
     return listOfOptions;
   };
-
   //This is called once on startup and then called on demand
   Blockly.ViewBlock.VBOptions_ = buildListOfOptions();
-  console.log('length of options: ' + Object.keys(Blockly.ViewBlock.VBOptions_).length.toString()); 
-  console.log(Blockly.ViewBlock.VBOptions_); 
 };
 
 
@@ -303,7 +283,7 @@ Blockly.ViewBlock.generateOptions = function() {
  * @private
  */
 Blockly.ViewBlock.reloadOptionsAfterChanges_ = function () {
-  console.log('reloadOptionsAfterChanges_'); 
+  console.log('ViewBlock.reloadOptionsAfterChanges_'); 
   Blockly.ViewBlock.VBOptionsNames_ = goog.object.getKeys(Blockly.ViewBlock.VBOptions_);
   goog.array.sort(Blockly.ViewBlock.VBOptionsNames_);
   Blockly.ViewBlock.ac_.matcher_.setRows(Blockly.ViewBlock.VBOptionsNames_);
@@ -313,125 +293,8 @@ Blockly.ViewBlock.reloadOptionsAfterChanges_ = function () {
  * Creates the auto-complete panel, powered by Google Closure's ac widget
  * @private
  */
-// Blockly.ViewBlock.createAutoComplete_ = function(inputText){
-//   Blockly.ViewBlock.VBOptionsNames_ = goog.object.getKeys( Blockly.ViewBlock.VBOptions_ );
-//   goog.array.sort(Blockly.ViewBlock.VBOptionsNames_);
-//   goog.events.unlistenByKey(Blockly.ViewBlock.currentListener_); //if there is a key, unlisten
-//   if (Blockly.ViewBlock.ac_)
-//     Blockly.ViewBlock.ac_.dispose(); //Make sure we only have 1 at a time
-
-//   // 3 objects needed to create a goog.ui.ac.AutoComplete instance
-//   var matcher = new Blockly.ViewBlock.ac.AIArrayMatcher(Blockly.ViewBlock.VBOptionsNames_, false);
-//   var renderer = new goog.ui.ac.Renderer();
-//   var inputHandler = new goog.ui.ac.InputHandler(null, null, false);
-
-//   Blockly.ViewBlock.ac_ = new goog.ui.ac.AutoComplete(matcher, renderer, inputHandler);
-//   Blockly.ViewBlock.ac_.setMaxMatches(100); //Renderer has a set height of 294px and a scroll bar.
-//   inputHandler.attachAutoComplete(Blockly.ViewBlock.ac_);
-//   inputHandler.attachInputs(goog.dom.getElement(inputText));
-
-//   // fix this
-//   Blockly.ViewBlock.currentListener_ = goog.events.listen(Blockly.ViewBlock.ac_,
-//       goog.ui.ac.AutoComplete.EventType.UPDATE,
-//     function() {
-//       var blockName = goog.dom.getElement(inputText).value;
-//       var blocksToView = goog.object.get(Blockly.ViewBlock.VBOptions_, blockName);
-//       //filter by? should return a list
-//       if (!blocksToView) {
-//        //TODO
-//       }
-
-//       // NOT QUITE SURE 
-//       //check if is in list
-//       function isIn(block, list) {
-//         for (i in list) {
-//           if (block == list[i]) {
-//             return true;
-//           }
-//         }
-//         return false;
-//       }
-
-//       //all current blocks
-//       var blocksAll = Blockly.mainWorkspace.getAllBlocks; //returns as a list
-
-//       for (block in blocksToView) {
-//         if (!isIn(block, blocksAll)) {
-//           block.hide();
-//         } else {
-//           block.show(); //show if not already shown
-//         }
-//       }
-//       //filtered = blocksToView;
-
-//       //for all that are not filtered --> hide
-// //
-//       //call to rearrange workspace
-//       //arranges blocks in layout
-//       function arrangeBlocks(layout) {
-//         var SPACER = 25;
-//         var topblocks = Blockly.mainWorkspace.getTopBlocks(false);
-//         // If the blocks are arranged by Category, sort the array
-//         if (Blockly.workspace_arranged_type === Blockly.BLKS_CATEGORY){
-//           topblocks.sort(sortByCategory);
-//         }
-//         var metrics = Blockly.mainWorkspace.getMetrics();
-//         var viewLeft = metrics.viewLeft + 5;
-//         var viewTop = metrics.viewTop + 5;
-//         var x = viewLeft;
-//         var y = viewTop;
-//         var wsRight = viewLeft + metrics.viewWidth;
-//         var wsBottom = viewTop + metrics.viewHeight;
-//         var maxHgt = 0;
-//         var maxWidth = 0;
-//         for (var i = 0, len = topblocks.length; i < len; i++) {
-//           var blk = topblocks[i];
-//           var blkXY = blk.getRelativeToSurfaceXY();
-//           var blockHW = blk.getHeightWidth();
-//           var blkHgt = blockHW.height;
-//           var blkWidth = blockHW.width;
-//           switch (layout) {
-//             case Blockly.BLKS_HORIZONTAL:
-//               if (x < wsRight) {
-//                 blk.moveBy(x - blkXY.x, y - blkXY.y);
-//                 blk.select();
-//                 x += blkWidth + SPACER;
-//                 if (blkHgt > maxHgt) // Remember highest block
-//                   maxHgt = blkHgt;
-//               } else {
-//                 y += maxHgt + SPACER;
-//                 maxHgt = blkHgt;
-//                 x = viewLeft;
-//                 blk.moveBy(x - blkXY.x, y - blkXY.y);
-//                 blk.select();
-//                 x += blkWidth + SPACER;
-//               }
-//               break;
-//             case Blockly.BLKS_VERTICAL:
-//               if (y < wsBottom) {
-//                 blk.moveBy(x - blkXY.x, y - blkXY.y);
-//                 blk.select();
-//                 y += blkHgt + SPACER;
-//                 if (blkWidth > maxWidth)  // Remember widest block
-//                   maxWidth = blkWidth;
-//               } else {
-//                 x += maxWidth + SPACER;
-//                 maxWidth = blkWidth;
-//                 y = viewTop;
-//                 blk.moveBy(x - blkXY.x, y - blkXY.y);
-//                 blk.select();
-//                 y += blkHgt + SPACER;
-//               }
-//               break;
-//           }
-//         }
-//       }
-//       Blockly.WarningHandler.checkAllBlocksForWarningsAndErrors();      
-//     }
-//   );
-// };
 Blockly.ViewBlock.createAutoComplete_ = function(inputText){
-  console.log('creating autocomplete for viewblock'); 
+  console.log('ViewBlock.createAutoComplete_'); 
 
   Blockly.ViewBlock.VBOptionsNames_ = goog.object.getKeys( Blockly.ViewBlock.VBOptions_ );
   goog.array.sort(Blockly.ViewBlock.VBOptionsNames_);
