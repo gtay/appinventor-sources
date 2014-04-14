@@ -315,6 +315,7 @@ Blockly.ViewBlock.createAutoComplete_ = function(inputText){
   Blockly.ViewBlock.currentListener_ = goog.events.listen(Blockly.ViewBlock.ac_,
       goog.ui.ac.AutoComplete.EventType.UPDATE,
     function() {
+      // is there a better way to do this? can imagine this getting slow with many blocks 
       var blockName = goog.dom.getElement(inputText).value;
       var blocks = Blockly.mainWorkspace.getAllBlocks();
       var matches = []; 
@@ -335,10 +336,20 @@ Blockly.ViewBlock.createAutoComplete_ = function(inputText){
         }
 
         // populate list of matches 
+        // TOOD: add functionality to cycle through all matches 
         if (blockName === translatedName) { 
           matches.push(block); 
-          console.log('match made'); 
+          console.log('Match made for: ' + blockName); 
         }
+      }
+      // focus the screen on (tentatively) the first match 
+      // do we want to select the block and highlight it? 
+      if (matches.length > 0) { 
+        var selectedBlock = matches[0]; 
+        var coords = selectedBlock.getRelativeToSurfaceXY(); 
+        Blockly.mainWorkspace.scrollbar.set(coords.x, coords.y);
+      } else {
+        console.log('No matches found for ' + blockName); 
       }
     }
   );
