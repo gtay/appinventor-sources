@@ -316,99 +316,108 @@ Blockly.ViewBlock.createAutoComplete_ = function(inputText){
       goog.ui.ac.AutoComplete.EventType.UPDATE,
     function() {
       var blockName = goog.dom.getElement(inputText).value;
-      var blockToCreate = goog.object.get(Blockly.ViewBlock.VBOptions_, blockName);
-      if (!blockToCreate) {
-        //If the input passed is not a block, check if it is a number or a pre-populated text block
-        var numberReg = new RegExp('^-?[0-9]\\d*(\.\\d+)?$', 'g');
-        var numberMatch = numberReg.exec(blockName);
-        var textReg = new RegExp('^[\"|\']+', 'g');
-        var textMatch = textReg.exec(blockName);
-        if (numberMatch && numberMatch.length > 0){
-          blockToCreate = {
-            canonicName: 'math_number',
-            dropDown: {
-              titleName: 'NUM',
-              value: blockName
+      var blocks = Blockly.mainWorkspace.getAllBlocks();
+      var matches = [];
+      for (var i = 0; i < blocks.length; i++) {
+        block = blocks[i];
+        if (block.category === 'Component' && block.setOrGet) {
+           translatedName = block.setOrGet + ' ' + block.instanceName + '.' + block.propertyName; 
+         } else if (block.category === 'Component' && block.blockType === 'event') { 
+           translatedName = "when " + block.instanceName + '.' + block.eventName; 
+         } else if (block.category === 'Component' && block.methodName) { 
+           translatedName = "call " + block.instanceName + '.' + block.methodName; 
+         } else if ((block.category === 'Text' || block.category === 'Variables') && block.inputList[0].titleRow[0].text_) { 
+           translatedName = block.inputList[0].titleRow[0].text_.toLowerCase();
+         } else if (block.inputList[block.inputList.length-1].titleRow[0].text_) {
+           translatedName = block.inputList[block.inputList.length-1].titleRow[0].text_.toLowerCase(); // don't know if lowercase is necessary 
+         } else { 
+            throw new Error('Unable to parse translatedName');
+        }
+        
+        //populate list of mathces
+        if (blockName === translatedName) {
+          matches.push(block);
+          console.log('Match made for: ' + blockName);;
+        }
+      }
+
+       if (matches.length > 0) { 
+
+         //helper function to check if contains
+         function contains(a, obj) {
+          var i = a.length;
+          while (i--) {
+           if (a[i] === obj) {
+            return true;
+           }
+          }
+          return false;
+         }
+
+         var wBlocks = Blockly.mainWorkspace.getAllBlocks();
+         var tBlocks = Blockly.mainWorkspace.getTopBlocks(false);
+         for (var j = 0; j < wBlocks.length; j++) {
+          //if it's not selected block and it's the top block, collapse all others
+          if (!contains(matches, wBlocks[j])) {
+            if (contains(tBlocks, wBlocks[j])) {
+              wBlocks[j].setCollapsed(true);
             }
-          };
-        }
-        else if (textMatch && textMatch.length === 1){
-          blockToCreate = {
-            canonicName: 'text',
-            dropDown: {
-              titleName: 'TEXT',
-              value: blockName.substring(1)
+            //need to account for cases where block is not a top block --> how to get top block of a block?
+          } else {
+            wBlocks[j].setCollapsed(false);
+          }
+         }
+         //rearrange vertically
+         Blockly.workspace_arranged_position = Blockly.BLKS_VERTICAL;
+         Blockly.workspace_arranged_latest_position = Blockly.BLKS_VERTICAL;
+         arrangeBlocksV();
+
+        
+
+         // Arranges block in layout (Horizontal or Vertical).
+        function arrangeBlocksV() {
+          var SPACER = 25;
+          var topblocks = Blockly.mainWorkspace.getTopBlocks(false);
+          // sorting the array
+          if (Blockly.workspace_arranged_type === Blockly.BLKS_CATEGORY){
+            topblocks.sort(sortByMatch);
+          }
+          var metrics = Blockly.mainWorkspace.getMetrics();
+          var viewLeft = metrics.viewLeft + 5;
+          var viewTop = metrics.viewTop + 5;
+          var x = viewLeft;
+          var y = viewTop;
+          var wsRight = viewLeft + metrics.viewWidth;
+          var wsBottom = viewTop + metrics.viewHeight;
+          var maxHgt = 0;
+          var maxWidth = 0;
+          for (var i = 0, len = topblocks.length; i < len; i++) {
+            var blk = topblocks[i];
+            var blkXY = blk.getRelativeToSurfaceXY();
+            var blockHW = blk.getHeightWidth();
+            var blkHgt = blockHW.height;
+            var blkWidth = blockHW.width;
+            if (y < wsBottom) {
+              blk.moveBy(x - blkXY.x, y - blkXY.y);
+              blk.select();
+              y += blkHgt + SPACER;
+              if (blkWidth > maxWidth)  // Remember widest block
+                maxWidth = blkWidth;
+            } else {
+              x += maxWidth + SPACER;
+              maxWidth = blkWidth;
+              y = viewTop;
+              blk.moveBy(x - blkXY.x, y - blkXY.y);
+              blk.select();
+              y += blkHgt + SPACER;
             }
-          };
-        }
-        else
-          return; // block does not exist: return
-      }
-
-      var blockToCreateName = '';
-      var block;
-      if (blockToCreate.dropDown){ //All blocks should have a dropDown property, even if empty
-        blockToCreateName = blockToCreate.canonicName;
-        // components have mutator attributes we need to deal with. We can also add these for special blocks
-        //   e.g., this is done for create empty list
-        if(!goog.object.isEmpty(blockToCreate.mutatorAttributes)) {
-          //construct xml
-          var xmlString = '<xml><block type="' + blockToCreateName + '"><mutation ';
-          for(var attributeName in blockToCreate.mutatorAttributes) {
-            xmlString += attributeName + '="' + blockToCreate.mutatorAttributes[attributeName] + '" ';
-          }
-
-          xmlString += '>';
-          xmlString += '</mutation></block></xml>';
-          var xml = Blockly.Xml.textToDom(xmlString);
-          block = Blockly.Xml.domToBlock_(Blockly.mainWorkspace, xml.firstChild);
-        } else {
-          block = new Blockly.Block(Blockly.mainWorkspace, blockToCreateName);
-          block.initSvg(); //Need to init the block before doing anything else
-          if (block.type && (block.type == "procedures_callnoreturn" || block.type == "procedures_callreturn")) {
-            //Need to make sure Procedure Block inputs are updated
-            Blockly.FieldProcedure.onChange.call(block.getTitle_("PROCNAME"), blockToCreate.dropDown.value);
           }
         }
 
-        if (blockToCreate.dropDown.titleName && blockToCreate.dropDown.value){
-          block.setTitleValue(blockToCreate.dropDown.value, blockToCreate.dropDown.titleName);
-          // change type checking for split blocks
-          if(blockToCreate.dropDown.value == 'SPLITATFIRST' || blockToCreate.dropDown.value == 'SPLIT') {
-            block.getInput("AT").setCheck(Blockly.Language.YailTypeToBlocklyType("text",Blockly.Language.INPUT));
-          } else if(blockToCreate.dropDown.value == 'SPLITATFIRSTOFANY' || blockToCreate.dropDown.value == 'SPLITATANY') {
-            block.getInput("AT").setCheck(Blockly.Language.YailTypeToBlocklyType("list",Blockly.Language.INPUT));
-          }
-        }
-      } else {
-        throw new Error('Type Block not correctly set up for: ' + blockToCreateName);
+       } else {
+         console.log('No matches found for ' + blockName); 
       }
-      Blockly.WarningHandler.checkAllBlocksForWarningsAndErrors();
-      block.render();
-      var blockSelected = Blockly.selected;
-      var selectedX, selectedY, selectedXY;
-      if (blockSelected) {
-        selectedXY = blockSelected.getRelativeToSurfaceXY();
-        selectedX = selectedXY.x;
-        selectedY = selectedXY.y;
-        Blockly.ViewBlock.connectIfPossible(blockSelected, block);
-        if(!block.parentBlock_){
-          //Place it close but a bit out of the way from the one we created.
-          block.moveBy(Blockly.selected.getRelativeToSurfaceXY().x + 110,
-              Blockly.selected.getRelativeToSurfaceXY().y + 50);
-        }
-        block.select();
-      }
-      else {
-        //calculate positions relative to the view and the latest click
-        var left = Blockly.mainWorkspace.getMetrics().viewLeft +
-            Blockly.latestClick.x;
-        var top = Blockly.mainWorkspace.getMetrics().viewTop +
-            Blockly.latestClick.y;
-        block.moveBy(left, top);
-        block.select();
-      }
-      Blockly.ViewBlock.hide();
+      
     }
   );
 };
