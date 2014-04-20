@@ -389,6 +389,7 @@ Blockly.ViewBlock.createAutoComplete_ = function(inputText){
       // is there a better way to do this? can imagine this getting slow with many blocks 
       var blockName = goog.dom.getElement(inputText).value;
       var blocks = Blockly.mainWorkspace.getAllBlocks();
+<<<<<<< HEAD
       Blockly.ViewBlock.VBMatches_ = []; 
       // var matches = []; 
       for (var i = 0; i < blocks.length; i++) {      
@@ -423,6 +424,109 @@ Blockly.ViewBlock.createAutoComplete_ = function(inputText){
       } else {
         // console.log('No matches found for ' + blockName); 
       }
+=======
+      var matches = [];
+      for (var i = 0; i < blocks.length; i++) {
+        block = blocks[i];
+        if (block.category === 'Component' && block.setOrGet) {
+           translatedName = block.setOrGet + ' ' + block.instanceName + '.' + block.propertyName; 
+         } else if (block.category === 'Component' && block.blockType === 'event') { 
+           translatedName = "when " + block.instanceName + '.' + block.eventName; 
+         } else if (block.category === 'Component' && block.methodName) { 
+           translatedName = "call " + block.instanceName + '.' + block.methodName; 
+         } else if ((block.category === 'Text' || block.category === 'Variables') && block.inputList[0].titleRow[0].text_) { 
+           translatedName = block.inputList[0].titleRow[0].text_.toLowerCase();
+         } else if (block.inputList[block.inputList.length-1].titleRow[0].text_) {
+           translatedName = block.inputList[block.inputList.length-1].titleRow[0].text_.toLowerCase(); // don't know if lowercase is necessary 
+         } else { 
+            throw new Error('Unable to parse translatedName');
+        }
+        
+        //populate list of mathces
+        if (blockName === translatedName) {
+          matches.push(block);
+          console.log('Match made for: ' + blockName);;
+        }
+      }
+
+       if (matches.length > 0) { 
+
+         //helper function to check if contains
+         function contains(a, obj) {
+          var i = a.length;
+          while (i--) {
+           if (a[i] === obj) {
+            return true;
+           }
+          }
+          return false;
+         }
+
+         var wBlocks = Blockly.mainWorkspace.getAllBlocks();
+         var tBlocks = Blockly.mainWorkspace.getTopBlocks(false);
+         for (var j = 0; j < wBlocks.length; j++) {
+          //if it's not selected block and it's the top block, collapse all others
+          if (!contains(matches, wBlocks[j])) {
+            if (contains(tBlocks, wBlocks[j])) {
+              wBlocks[j].setCollapsed(true);
+            }
+            //need to account for cases where block is not a top block --> how to get top block of a block?
+          } else {
+            wBlocks[j].setCollapsed(false);
+          }
+         }
+         //rearrange vertically
+         Blockly.workspace_arranged_position = Blockly.BLKS_VERTICAL;
+         Blockly.workspace_arranged_latest_position = Blockly.BLKS_VERTICAL;
+         arrangeBlocksV();
+
+        
+
+         // Arranges block in layout (Horizontal or Vertical).
+        function arrangeBlocksV() {
+          var SPACER = 25;
+          var topblocks = Blockly.mainWorkspace.getTopBlocks(false);
+          // sorting the array
+          if (Blockly.workspace_arranged_type === Blockly.BLKS_CATEGORY){
+            topblocks.sort(sortByMatch);
+          }
+          var metrics = Blockly.mainWorkspace.getMetrics();
+          var viewLeft = metrics.viewLeft + 5;
+          var viewTop = metrics.viewTop + 5;
+          var x = viewLeft;
+          var y = viewTop;
+          var wsRight = viewLeft + metrics.viewWidth;
+          var wsBottom = viewTop + metrics.viewHeight;
+          var maxHgt = 0;
+          var maxWidth = 0;
+          for (var i = 0, len = topblocks.length; i < len; i++) {
+            var blk = topblocks[i];
+            var blkXY = blk.getRelativeToSurfaceXY();
+            var blockHW = blk.getHeightWidth();
+            var blkHgt = blockHW.height;
+            var blkWidth = blockHW.width;
+            if (y < wsBottom) {
+              blk.moveBy(x - blkXY.x, y - blkXY.y);
+              blk.select();
+              y += blkHgt + SPACER;
+              if (blkWidth > maxWidth)  // Remember widest block
+                maxWidth = blkWidth;
+            } else {
+              x += maxWidth + SPACER;
+              maxWidth = blkWidth;
+              y = viewTop;
+              blk.moveBy(x - blkXY.x, y - blkXY.y);
+              blk.select();
+              y += blkHgt + SPACER;
+            }
+          }
+        }
+
+       } else {
+         console.log('No matches found for ' + blockName); 
+      }
+      
+>>>>>>> expands matched/collapses unmatched, and then rearranges workspace
     }
   );
 };
