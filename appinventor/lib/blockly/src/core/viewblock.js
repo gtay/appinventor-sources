@@ -372,7 +372,12 @@ Blockly.ViewBlock.createAutoComplete_ = function(inputText){
          Blockly.workspace_arranged_latest_position = Blockly.BLKS_VERTICAL;
          arrangeBlocksV();
 
-        
+        //function to sort blocks by how well it matches
+        function sortByMatch(a, b) {
+          if (contains(matches, a)) return  +1;
+          else if (contains(matches, b)) return -1;
+          else return 0;
+        }
 
          // Arranges block in layout (Horizontal or Vertical).
         function arrangeBlocksV() {
