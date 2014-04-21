@@ -354,17 +354,17 @@ Blockly.ViewBlock.createAutoComplete_ = function(inputText){
           return false;
          }
 
-         var wBlocks = Blockly.mainWorkspace.getAllBlocks();
          var tBlocks = Blockly.mainWorkspace.getTopBlocks(false);
-         for (var j = 0; j < wBlocks.length; j++) {
+         var topMatches = [];
+         for (var t = 0; t < matches.length; t++) {
+            topMatches.push(matches[t].getRootBlock());
+         }
+         for (var j = 0; j < tBlocks.length; j++) {
           //if it's not selected block and it's the top block, collapse all others
-          if (!contains(matches, wBlocks[j])) {
-            if (contains(tBlocks, wBlocks[j])) {
-              wBlocks[j].setCollapsed(true);
-            }
-            //need to account for cases where block is not a top block --> how to get top block of a block?
+          if (!contains(topMatches, tBlocks[j])) {
+              tBlocks[j].setCollapsed(true);
           } else {
-            wBlocks[j].setCollapsed(false);
+            tBlocks[j].setCollapsed(false);
           }
          }
          //rearrange vertically
@@ -372,12 +372,12 @@ Blockly.ViewBlock.createAutoComplete_ = function(inputText){
          Blockly.workspace_arranged_latest_position = Blockly.BLKS_VERTICAL;
          arrangeBlocksV();
 
-        //function to sort blocks by how well it matches
-        function sortByMatch(a, b) {
-          if (contains(matches, a)) return  +1;
-          else if (contains(matches, b)) return -1;
-          else return 0;
-        }
+         //function to sort blocks by how well it matches
+         function sortByMatch(a, b) {
+           if (contains(topMatches, a)) return  +1;
+           else if (contains(topMatches, b)) return -1;
+           else return 0;
+         }
 
          // Arranges block in layout (Horizontal or Vertical).
         function arrangeBlocksV() {
