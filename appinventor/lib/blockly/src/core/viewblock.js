@@ -260,7 +260,7 @@ Blockly.ViewBlock.show = function(){
   // If the input gets cleaned before adding the handler, all keys are read
   // correctly (at times it was missing the first char)
   goog.dom.getElement(Blockly.ViewBlock.inputText_).value = '';
-  // goog.dom.getElement(Blockly.ViewBlock.matchesText_).innerHTML = ''; 
+  goog.dom.getElement(Blockly.ViewBlock.matchesText_).innerHTML = ''; 
   goog.events.listen(Blockly.ViewBlock.inputKh_, 'key', Blockly.ViewBlock.handleKey);
   goog.events.listen(Blockly.ViewBlock.prevAh_, goog.events.ActionHandler.EventType.ACTION, Blockly.ViewBlock.handlePrevious); 
   goog.events.listen(Blockly.ViewBlock.nextAh_, goog.events.ActionHandler.EventType.ACTION, Blockly.ViewBlock.handleNext); 
@@ -433,7 +433,7 @@ Blockly.ViewBlock.createAutoComplete_ = function(inputText){
       // focus the screen on (tentatively) the first match 
       // do we want to select the block and highlight it? 
       if (Blockly.ViewBlock.VBMatches_.length > 0) { 
-        // goog.dom.getElement(Blockly.ViewBlock.matchesText_).innerHTML = Blockly.ViewBlock.VBMatches_.length.toString() + ' match(es) found.'; 
+        goog.dom.getElement(Blockly.ViewBlock.matchesText_).innerHTML = Blockly.ViewBlock.VBMatches_.length.toString() + ' match(es) found.'; 
         var selectedBlock = Blockly.ViewBlock.VBMatches_[Blockly.ViewBlock.VBMatchesIdx_]; 
         var coords = selectedBlock.getRelativeToSurfaceXY(); 
         Blockly.mainWorkspace.scrollbar.set(coords.x, coords.y);
@@ -443,7 +443,6 @@ Blockly.ViewBlock.createAutoComplete_ = function(inputText){
     }
   );
 };
-
 
 //--------------------------------------
 // A custom matcher for the auto-complete widget that can handle numbers as well as the default
