@@ -19,7 +19,10 @@ Blockly.BlocklyEditor.startup = function(documentBody, formName) {
   var viewblock_config = {
     frame: 'ai_frame',
     viewBlockDiv: 'ai_view_block',
-    inputText: 'ac_view_input_text'
+    inputText: 'ac_view_input_text', 
+    previous: 'ac_button_previous', 
+    next: 'ac_button_next', 
+    matchesText: 'ac_matches_text'
   };
 
   //This is what Blockly's init function does when passing options.

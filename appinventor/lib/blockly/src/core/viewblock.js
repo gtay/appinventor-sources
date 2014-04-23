@@ -39,6 +39,7 @@ Blockly.ViewBlock = function( htmlConfig ){
   Blockly.ViewBlock.inputText_ = htmlConfig['inputText'];
   Blockly.ViewBlock.buttonNext_ = htmlConfig['next']; 
   Blockly.ViewBlock.buttonPrevious_ = htmlConfig['previous'];
+  Blockly.ViewBlock.matchesText_ = htmlConfig['matchesText']; 
 
   Blockly.ViewBlock.inputKh_ = new goog.events.KeyHandler(goog.dom.getElement(Blockly.ViewBlock.inputText_));
   Blockly.ViewBlock.nextAh_ = new goog.events.ActionHandler(goog.dom.getElement(Blockly.ViewBlock.buttonNext_)); 
@@ -92,14 +93,20 @@ Blockly.ViewBlock.viewBlockDiv_ = null;
  */
 Blockly.ViewBlock.inputText_ = "Filter Blocks";
 
+/** 
+ * text to display the number of matches on filter bar
+ * @private
+ */ 
+Blockly.ViewBlock.matchesText_ = ''; 
+
 /**
- * NEW!!! button to toggle to next autocomplete match
+ * button contained in filter panel, used to navigate through matches 
  * @private
  */
  Blockly.ViewBlock.buttonNext_ = null; 
 
  /**
- * NEW!!! button to toggle to previous autocomplete match
+ * button contained in filter panel, used to navigate through matches 
  * @private
  */
  Blockly.ViewBlock.buttonPrevious_ = null; 
@@ -226,7 +233,6 @@ Blockly.ViewBlock.currentListener_ = null;
  * function to hide the autocomplete panel. Also used from hideChaff in
  * Blockly.js
  */
-// TODO: should we unarrange the workspace? 
 Blockly.ViewBlock.hide = function(){ //this should never be called
   if (Blockly.ViewBlock.viewBlockDiv_ == null)
     return;
@@ -254,6 +260,7 @@ Blockly.ViewBlock.show = function(){
   // If the input gets cleaned before adding the handler, all keys are read
   // correctly (at times it was missing the first char)
   goog.dom.getElement(Blockly.ViewBlock.inputText_).value = '';
+  // goog.dom.getElement(Blockly.ViewBlock.matchesText_).innerHTML = ''; 
   goog.events.listen(Blockly.ViewBlock.inputKh_, 'key', Blockly.ViewBlock.handleKey);
   goog.events.listen(Blockly.ViewBlock.prevAh_, goog.events.ActionHandler.EventType.ACTION, Blockly.ViewBlock.handlePrevious); 
   goog.events.listen(Blockly.ViewBlock.nextAh_, goog.events.ActionHandler.EventType.ACTION, Blockly.ViewBlock.handleNext); 
@@ -426,6 +433,7 @@ Blockly.ViewBlock.createAutoComplete_ = function(inputText){
       // focus the screen on (tentatively) the first match 
       // do we want to select the block and highlight it? 
       if (Blockly.ViewBlock.VBMatches_.length > 0) { 
+        // goog.dom.getElement(Blockly.ViewBlock.matchesText_).innerHTML = Blockly.ViewBlock.VBMatches_.length.toString() + ' match(es) found.'; 
         var selectedBlock = Blockly.ViewBlock.VBMatches_[Blockly.ViewBlock.VBMatchesIdx_]; 
         var coords = selectedBlock.getRelativeToSurfaceXY(); 
         Blockly.mainWorkspace.scrollbar.set(coords.x, coords.y);
