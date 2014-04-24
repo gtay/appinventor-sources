@@ -29,7 +29,8 @@ goog.require('goog.ui.ac.Renderer');
        viewBlockDiv: 'ai_view_block',
        inputText: 'ac_view_input_text'
        previous: 'ac_button_previous', 
-       next: 'ac_button_next'
+       next: 'ac_button_next',
+       matchesText: 'ac_matches_text'
      }
  * stating the ids of the attributes to be used in the html enclosing page
  * create a new block
@@ -177,6 +178,21 @@ Blockly.ViewBlock.VBMatches_ = [];
 Blockly.ViewBlock.VBMatchesIdx_ = 0; 
 
 /**
+ * pointer to the automcomplete widget to be able to change its contents when
+ * the Language tree is modified (additions, renaming, or deletions)
+ * @private
+ */
+Blockly.ViewBlock.ac_ = null;
+
+/**
+ * We keep a listener pointer in case of needing to unlisten to it. We only want
+ * one listener at a time, and a reload could create a second one, so we
+ * unlisten first and then listen back
+ * @private
+ */
+Blockly.ViewBlock.currentListener_ = null;
+
+/**
  * Listener function that allows the user to focus on the next element in the
  * VBMatches_ array created in createAutoComplete_. 
  */ 
@@ -213,21 +229,6 @@ Blockly.ViewBlock.handlePrevious = function(e) {
     console.log('No more matches for ' + blockName); 
   }
 }; 
-
-/**
- * pointer to the automcomplete widget to be able to change its contents when
- * the Language tree is modified (additions, renaming, or deletions)
- * @private
- */
-Blockly.ViewBlock.ac_ = null;
-
-/**
- * We keep a listener pointer in case of needing to unlisten to it. We only want
- * one listener at a time, and a reload could create a second one, so we
- * unlisten first and then listen back
- * @private
- */
-Blockly.ViewBlock.currentListener_ = null;
 
 /**
  * function to hide the autocomplete panel. Also used from hideChaff in
@@ -424,13 +425,12 @@ Blockly.ViewBlock.createAutoComplete_ = function(inputText){
         }
 
         // populate list of matches 
-        // TOOD: add functionality to cycle through all matches 
         if (blockName === translatedName) { 
           Blockly.ViewBlock.VBMatches_.push(block); 
           console.log('Match made for: ' + blockName); 
         }
       }
-      // focus the screen on (tentatively) the first match 
+      // focus the screen on the first match
       // do we want to select the block and highlight it? 
       if (Blockly.ViewBlock.VBMatches_.length > 0) { 
         goog.dom.getElement(Blockly.ViewBlock.matchesText_).innerHTML = Blockly.ViewBlock.VBMatches_.length.toString() + ' match(es) found.'; 
@@ -447,7 +447,6 @@ Blockly.ViewBlock.createAutoComplete_ = function(inputText){
 //--------------------------------------
 // A custom matcher for the auto-complete widget that can handle numbers as well as the default
 // functionality of goog.ui.ac.ArrayMatcher
-
 goog.provide('Blockly.ViewBlock.ac.AIArrayMatcher');
 
 goog.require('goog.iter');
