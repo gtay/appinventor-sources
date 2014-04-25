@@ -206,7 +206,7 @@ Blockly.ViewBlock.handleNext = function(e) {
     var coords = selectedBlock.getRelativeToSurfaceXY(); 
     Blockly.mainWorkspace.scrollbar.set(coords.x, coords.y);
   } else {
-    console.log('No more matches for ' + blockName); 
+    // console.log('No more matches for ' + blockName); 
   }
 }; 
 
@@ -225,7 +225,7 @@ Blockly.ViewBlock.handlePrevious = function(e) {
     var coords = selectedBlock.getRelativeToSurfaceXY(); 
     Blockly.mainWorkspace.scrollbar.set(coords.x, coords.y);
   } else {
-    console.log('No more matches for ' + blockName); 
+    // console.log('No more matches for ' + blockName); 
   }
 }; 
 
@@ -285,7 +285,6 @@ Blockly.ViewBlock.needsReload = {
  * @private
  */ 
 Blockly.ViewBlock.lazyLoadOfOptions_ = function () {
-  console.log('ViewBlock.LazyLoadOfOptions'); 
   // Optimisation to avoid reloading all components and built-in objects unless it is needed.
   // needsReload.components is setup when adding/renaming/removing a component in components.js
   if (this.needsReload.components){
@@ -305,8 +304,6 @@ Blockly.ViewBlock.lazyLoadOfOptions_ = function () {
  * example of how to call this function.
  */ 
 Blockly.ViewBlock.generateOptions = function() {
-  console.log('ViewBlock.generateOptions'); 
-
   var buildListOfOptions = function() {
     var listOfOptions = {};
     var viewblockArray;
@@ -360,7 +357,6 @@ Blockly.ViewBlock.generateOptions = function() {
  * @private
  */
 Blockly.ViewBlock.reloadOptionsAfterChanges_ = function () {
-  console.log('ViewBlock.reloadOptionsAfterChanges_'); 
   Blockly.ViewBlock.VBOptionsNames_ = goog.object.getKeys(Blockly.ViewBlock.VBOptions_);
   goog.array.sort(Blockly.ViewBlock.VBOptionsNames_);
   Blockly.ViewBlock.ac_.matcher_.setRows(Blockly.ViewBlock.VBOptionsNames_);
@@ -371,8 +367,6 @@ Blockly.ViewBlock.reloadOptionsAfterChanges_ = function () {
  * @private
  */
 Blockly.ViewBlock.createAutoComplete_ = function(inputText){
-  console.log('ViewBlock.createAutoComplete_'); 
-
   Blockly.ViewBlock.VBOptionsNames_ = goog.object.getKeys( Blockly.ViewBlock.VBOptions_ );
   goog.array.sort(Blockly.ViewBlock.VBOptionsNames_);
   goog.events.unlistenByKey(Blockly.ViewBlock.currentListener_); //if there is a key, unlisten
@@ -416,7 +410,7 @@ Blockly.ViewBlock.createAutoComplete_ = function(inputText){
         // populate list of matches 
         if (blockName === translatedName) { 
           Blockly.ViewBlock.VBMatches_.push(block); 
-          console.log('Match made for: ' + blockName); 
+          // console.log('Match made for: ' + blockName); 
         }
       }
       // focus the screen on the first match
@@ -427,7 +421,7 @@ Blockly.ViewBlock.createAutoComplete_ = function(inputText){
         var coords = selectedBlock.getRelativeToSurfaceXY(); 
         Blockly.mainWorkspace.scrollbar.set(coords.x, coords.y);
       } else {
-        console.log('No matches found for ' + blockName); 
+        // console.log('No matches found for ' + blockName); 
       }
     }
   );
