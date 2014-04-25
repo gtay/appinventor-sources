@@ -13,6 +13,7 @@ import com.google.appinventor.client.OdeAsyncCallback;
 import com.google.appinventor.client.editor.youngandroid.YaBlocksEditor;
 import com.google.appinventor.client.editor.youngandroid.YailGenerationException;
 import com.google.appinventor.client.explorer.project.Project;
+import com.google.appinventor.client.output.OdeLog;
 import com.google.appinventor.client.settings.project.ProjectSettings;
 import com.google.appinventor.shared.rpc.project.FileDescriptorWithContent;
 import com.google.appinventor.shared.rpc.project.ProjectRootNode;
@@ -69,7 +70,13 @@ public final class EditorManager {
       public void run() {
         // When the timer goes off, save all dirtyProjectSettings and
         // dirtyFileEditors.
-        saveDirtyEditors(null);
+        Ode.getInstance().lockScreens(true); // Lock out changes
+        saveDirtyEditors(new Command() {
+            @Override
+            public void execute() {
+              Ode.getInstance().lockScreens(false); // I/O finished, unlock
+            }
+          });
       }
     };
   }
@@ -173,7 +180,11 @@ public final class EditorManager {
    */
   public void scheduleAutoSave(FileEditor fileEditor) {
     // Add the file editor to the dirtyFileEditors list.
-    dirtyFileEditors.add(fileEditor);
+    if (!fileEditor.isDamaged()) { // Don't save damaged files
+      dirtyFileEditors.add(fileEditor);
+    } else {
+      OdeLog.log("Not saving blocks for " + fileEditor.getFileId() + " because it is damaged.");
+    }
     scheduleAutoSaveTimer();
   }
 
@@ -293,7 +304,8 @@ public final class EditorManager {
       }
     }
    
-    Ode.getInstance().getProjectService().save(yailFiles,
+    Ode.getInstance().getProjectService().save(Ode.getInstance().getSessionId(),
+        yailFiles,
         new OdeAsyncCallback<Long>(MESSAGES.saveErrorMultipleFiles()) {
       @Override
       public void onSuccess(Long date) {
@@ -336,7 +348,8 @@ public final class EditorManager {
       }
 
     } else {
-      Ode.getInstance().getProjectService().save(filesWithContent,
+      Ode.getInstance().getProjectService().save(Ode.getInstance().getSessionId(),
+          filesWithContent,
           new OdeAsyncCallback<Long>(MESSAGES.saveErrorMultipleFiles()) {
         @Override
         public void onSuccess(Long date) {

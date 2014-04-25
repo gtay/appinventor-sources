@@ -230,6 +230,12 @@ public interface Images extends Resources {
   ImageResource listpicker();
 
   /**
+   * Designer palette item: ListView component
+   */
+  @Source("com/google/appinventor/images/listView.png")
+  ImageResource listview();
+
+  /**
    * Designer palette item: PhoneCall component
    */
   @Source("com/google/appinventor/images/phoneCall.png")
@@ -434,4 +440,17 @@ public interface Images extends Resources {
    */
   @Source("com/google/appinventor/images/procedures.png")
   ImageResource procedures();
+
+  /**
+   * Designer palette item: Sharing Component
+   */
+  @Source("com/google/appinventor/images/sharing.png")
+  ImageResource sharingComponent();
+
+  /**
+    * Designer palette item: Spinner
+    */
+  @Source("com/google/appinventor/images/spinner.png")
+  ImageResource spinner();
+
 }

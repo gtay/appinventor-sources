@@ -21,6 +21,7 @@ import com.google.appinventor.client.editor.simple.components.MockImage;
 import com.google.appinventor.client.editor.simple.components.MockImagePicker;
 import com.google.appinventor.client.editor.simple.components.MockImageSprite;
 import com.google.appinventor.client.editor.simple.components.MockLabel;
+import com.google.appinventor.client.editor.simple.components.MockListView;
 import com.google.appinventor.client.editor.simple.components.MockListPicker;
 import com.google.appinventor.client.editor.simple.components.MockNonVisibleComponent;
 import com.google.appinventor.client.editor.simple.components.MockPasswordTextBox;
@@ -32,6 +33,7 @@ import com.google.appinventor.client.editor.simple.components.MockTextBox;
 import com.google.appinventor.client.editor.simple.components.MockVerticalArrangement;
 import com.google.appinventor.client.editor.simple.components.MockVideoPlayer;
 import com.google.appinventor.client.editor.simple.components.MockWebViewer;
+import com.google.appinventor.client.editor.simple.components.MockSpinner;
 import com.google.common.collect.Maps;
 import com.google.gwt.resources.client.ImageResource;
 import com.google.gwt.user.client.ui.Image;
@@ -109,6 +111,9 @@ public final class SimpleComponentDescriptor {
     bundledImages.put("images/twitter.png", images.twitterComponent());
     bundledImages.put("images/voting.png", images.voting());
     bundledImages.put("images/web.png", images.web());
+    bundledImages.put("images/sharing.png", images.sharingComponent());
+    bundledImages.put("images/spinner.png", images.spinner());
+    bundledImages.put("images/listView.png", images.listview());
     imagesInitialized = true;
   }
 
@@ -256,6 +261,8 @@ public final class SimpleComponentDescriptor {
       return new MockImage(editor);
     } else if (name.equals(MockLabel.TYPE)) {
       return new MockLabel(editor);
+    } else if (name.equals(MockListView.TYPE)) {
+      return new MockListView(editor);
     } else if (name.equals(MockSlider.TYPE)) {
         return new MockSlider(editor);
     } else if (name.equals(MockPasswordTextBox.TYPE)) {
@@ -288,6 +295,8 @@ public final class SimpleComponentDescriptor {
       return new MockVideoPlayer(editor);
     } else if (name.equals(MockWebViewer.TYPE)) {
       return new MockWebViewer(editor);
+    } else if (name.equals(MockSpinner.TYPE)) {
+      return new MockSpinner(editor);
     } else {
       // TODO(user): add 3rd party mock component proxy here
       throw new UnsupportedOperationException("unknown component: " + name);

@@ -325,6 +325,8 @@ Blockly.Block.prototype.dispose = function(healStack, animate) {
     this.svg_ = null;
   }
   Blockly.ViewBlock.needsReload.components = true;
+  // Remove any associated errors or warnings.
+  Blockly.WarningHandler.checkDisposedBlock.call(this);
 };
 
 /**
