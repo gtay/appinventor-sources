@@ -76,7 +76,6 @@ Blockly.ViewBlock = function( htmlConfig ){
       //SELECT do select after enter
     }
   };
-  // goog.events.listen(Blockly.ViewBlock.docKh_, 'key', Blockly.ViewBlock.handleKey);
   // Create the auto-complete panel
   Blockly.ViewBlock.createAutoComplete_(Blockly.ViewBlock.inputText_);
 };
@@ -293,8 +292,6 @@ Blockly.ViewBlock.lazyLoadOfOptions_ = function () {
     Blockly.ViewBlock.generateOptions();
     this.needsReload.components = null;
   }
-  //Blockly.ViewBlock.loadGlobalVariables_();
-  //Blockly.ViewBlock.loadProcedures_();
   this.reloadOptionsAfterChanges_();
 }; 
 
@@ -313,15 +310,13 @@ Blockly.ViewBlock.generateOptions = function() {
   var buildListOfOptions = function() {
     var listOfOptions = {};
     var viewblockArray;
-    // get only top blocks to start with? 
     var blocks = Blockly.mainWorkspace.getAllBlocks();
 
-    // what are the values we need? 
+    // can we get names in a better way? 
     for (var i = 0; i < blocks.length; i++) {      
       block = blocks[i]; 
       var canonicName = ''; 
       var translatedName = ''; 
-      // console.log(block); 
 
       if (block.category === 'Component' && block.setOrGet) {
         canonicName = block.type;
@@ -332,22 +327,15 @@ Blockly.ViewBlock.generateOptions = function() {
       } else if (block.category === 'Component' && block.methodName) { 
         canonicName = block.type; 
         translatedName = "call " + block.instanceName + '.' + block.methodName; 
-      
-      // this is still wrong!!! 
-      // something with varibles here too? how do i generalize this??? 
       } else if ((block.category === 'Text' || block.category === 'Variables') && block.inputList[0].titleRow[0].text_) { 
         canonicName = block.type; 
         translatedName = block.inputList[0].titleRow[0].text_.toLowerCase();
       } else if (block.inputList[block.inputList.length-1].titleRow[0].text_) {
         canonicName = block.type; 
         translatedName = block.inputList[block.inputList.length-1].titleRow[0].text_.toLowerCase(); // don't know if lowercase is necessary 
-      
       } else { 
          throw new Error('Unable to parse canonicName and translatedName');
       }
-
-      // console.log(canonicName); 
-      // console.log(translatedName); 
 
       if (canonicName !== '') { 
           listOfOptions[translatedName] = {
@@ -407,6 +395,7 @@ Blockly.ViewBlock.createAutoComplete_ = function(inputText){
       // is there a better way to do this? can imagine this getting slow with many blocks 
       var blockName = goog.dom.getElement(inputText).value;
       var blocks = Blockly.mainWorkspace.getAllBlocks();
+      Blockly.ViewBlock.VBMatches_ = []; 
       // var matches = []; 
       for (var i = 0; i < blocks.length; i++) {      
         block = blocks[i]; 
