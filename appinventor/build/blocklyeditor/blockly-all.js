@@ -1617,7 +1617,7 @@ goog.addDependency("../lib/blockly/src/core/field.js", ["Blockly.Field"], ["Bloc
 goog.addDependency("../lib/blockly/src/core/field_angle.js", ["Blockly.FieldAngle"], ["Blockly.FieldTextInput"]);
 goog.addDependency("../lib/blockly/src/core/field_checkbox.js", ["Blockly.FieldCheckbox"], ["Blockly.Field"]);
 goog.addDependency("../lib/blockly/src/core/field_colour.js", ["Blockly.FieldColour"], ["Blockly.Field", "goog.ui.ColorPicker"]);
-goog.addDependency("../lib/blockly/src/core/field_dropdown.js", ["Blockly.FieldDropdown"], ["Blockly.Field"]);
+goog.addDependency("../lib/blockly/src/core/field_dropdown.js", ["Blockly.FieldDropdown"], ["Blockly.Field", "Blockly.ViewBlock"]);
 goog.addDependency("../lib/blockly/src/core/field_image.js", ["Blockly.FieldImage"], ["Blockly.Field", "goog.userAgent"]);
 goog.addDependency("../lib/blockly/src/core/field_label.js", ["Blockly.FieldLabel"], ["Blockly.Field", "Blockly.Tooltip"]);
 goog.addDependency("../lib/blockly/src/core/field_textinput.js", ["Blockly.FieldTextInput"], ["Blockly.Field", "goog.asserts", "goog.userAgent"]);
@@ -1677,7 +1677,7 @@ goog.addDependency("./src/language/common/text.js", [], []);
 goog.addDependency("./src/language/common/utilities.js", [], []);
 goog.addDependency("./src/language/en/_messages.js", [], []);
 goog.addDependency("./src/mutators.js", [], []);
-goog.addDependency("./src/replmgr.js", [], ["goog.ui.Dialog", "goog.net.XmlHttp", "goog.json", "goog.Uri.QueryData", "goog.events", "goog.events.EventType", "goog.crypt.Hash", "goog.crypt.Sha1", "goog.crypt.Hmac"]);
+goog.addDependency("./src/replmgr.js", [], ["goog.ui.Dialog", "goog.net.XmlHttp", "goog.json", "goog.Uri.QueryData", "goog.events", "goog.events.EventType", "goog.crypt.Hash", "goog.crypt.Sha1", "goog.crypt.Hmac", "goog.crypt.base64"]);
 goog.addDependency("./src/savefile.js", [], []);
 goog.addDependency("./src/versioning.js", [], []);
 goog.addDependency("./src/versioning/017_blocksOverhaul.js", [], []);
@@ -16248,7 +16248,7 @@ Blockly.ErrorIcon.prototype.createIcon_ = function() {
  */
 Blockly.ErrorIcon.prototype.textToDom_ = function(text) {
   var paragraph = Blockly.createSvgElement('text',
-      {'class': 'blocklyText', 'y': Blockly.Bubble.BORDER_WIDTH}, null);
+      {'class': 'blocklyText  blocklyErrorWarningText', 'y': Blockly.Bubble.BORDER_WIDTH}, null);
   var lines = text.split('\n');
   for (var i = 0; i < lines.length; i++) {
     var tspanElement = Blockly.createSvgElement('tspan',
@@ -17673,7 +17673,7 @@ Blockly.Warning.prototype.createIcon_ = function() {
 Blockly.Warning.prototype.textToDom_ = function(text) {
   var paragraph = /** @type {!SVGTextElement} */ (
       Blockly.createSvgElement(
-          'text', {'class': 'blocklyText', 'y': Blockly.Bubble.BORDER_WIDTH},
+          'text', {'class': 'blocklyText blocklyErrorWarningText', 'y': Blockly.Bubble.BORDER_WIDTH},
           null));
   var lines = text.split('\n');
   for (var i = 0; i < lines.length; i++) {
@@ -37500,6 +37500,8 @@ Blockly.Block.prototype.dispose = function(healStack, animate) {
     this.svg_ = null;
   }
   Blockly.ViewBlock.needsReload.components = true;
+  // Remove any associated errors or warnings.
+  Blockly.WarningHandler.checkDisposedBlock.call(this);
 };
 
 /**
@@ -45657,6 +45659,7 @@ Blockly.FieldColour.dispose_ = function() {
 goog.provide('Blockly.FieldDropdown');
 
 goog.require('Blockly.Field');
+goog.require('Blockly.ViewBlock'); 
 
 
 /**
@@ -45917,6 +45920,7 @@ Blockly.FieldDropdown.prototype.getValue = function() {
  * @param {string} newValue New value to set.
  */
 Blockly.FieldDropdown.prototype.setValue = function(newValue) {
+  Blockly.ViewBlock.needsReload.components = true;
   this.value_ = newValue;
   // Look up and display the human-readable text.
   var options = this.getOptions_();
@@ -47384,6 +47388,14 @@ Blockly.Css.CONTENT = [
   '  user-select: none;',
   '  cursor: inherit;',
   '}',
+  '/*',
+  ' * Selecting text for Errors and Warnings is allowed though.',
+  ' */',
+  '.blocklySvg text.blocklyErrorWarningText {',
+  '  -moz-user-select: text;',
+  '  -webkit-user-select: text;',
+  '  user-select: text;',
+  '}',
   '',
   '.blocklyHidden {',
   '  display: none;',
@@ -48526,43 +48538,44 @@ Blockly.TypeBlock = function( htmlConfig ){
   Blockly.TypeBlock.inputKh_ = new goog.events.KeyHandler(goog.dom.getElement(Blockly.TypeBlock.inputText_));
 
   Blockly.TypeBlock.handleKey = function(e){
-    if (e.altKey || e.ctrlKey || e.metaKey || e.keycode === 9) return; // 9 is tab
-    //We need to duplicate delete handling here from blockly.js
-    if (e.keyCode === 8 || e.keyCode === 46) {
-      // Delete or backspace.
-      // If the panel is showing the panel, just return to allow deletion in the panel itself
-      if (goog.style.isElementShown(goog.dom.getElement(Blockly.TypeBlock.typeBlockDiv_))) return;
-      // if id is empty, it is deleting inside a block title
-      if (e.target.id === '') return;
-      // only when selected and deletable, actually delete the block
-      if (Blockly.selected && Blockly.selected.deletable) {
-        Blockly.hideChaff();
-        Blockly.selected.dispose(true, true);
+    if (!Blockly.ViewBlock.visible) { 
+      if (e.altKey || e.ctrlKey || e.metaKey || e.keycode === 9) return; // 9 is tab
+      //We need to duplicate delete handling here from blockly.js
+      if (e.keyCode === 8 || e.keyCode === 46) {
+        // Delete or backspace.
+        // If the panel is showing the panel, just return to allow deletion in the panel itself
+        if (goog.style.isElementShown(goog.dom.getElement(Blockly.TypeBlock.typeBlockDiv_))) return;
+        // if id is empty, it is deleting inside a block title
+        if (e.target.id === '') return;
+        // only when selected and deletable, actually delete the block
+        if (Blockly.selected && Blockly.selected.deletable) {
+          Blockly.hideChaff();
+          Blockly.selected.dispose(true, true);
+        }
+        // Stop the browser from going back to the previous page.
+        e.preventDefault();
+        return;
       }
-      // Stop the browser from going back to the previous page.
-      e.preventDefault();
-      return;
-    }
-    if (e.keyCode === 27){ //Dismiss the panel with esc
-      Blockly.TypeBlock.hide();
-      return;
-    }
-    // A way to know if the user is editing a block or trying to type a new one
-    if (e.target.id === '') return;
-    if (goog.style.isElementShown(goog.dom.getElement(Blockly.TypeBlock.typeBlockDiv_))) {
-      // Enter in the panel makes it select an option
-      if (e.keyCode === 13) Blockly.TypeBlock.hide();
-    }
-    else if (!Blockly.ViewBlock.visible){
-      Blockly.TypeBlock.show();
-      // Can't seem to make Firefox display first character, so keep all browsers from automatically
-      // displaying the first character and add it manually.
-      e.preventDefault();
-      goog.dom.getElement(Blockly.TypeBlock.inputText_).value =
-	String.fromCharCode(e.charCode != null ? e.charCode : e.keycode);
+      if (e.keyCode === 27){ //Dismiss the panel with esc
+        Blockly.TypeBlock.hide();
+        return;
+      }
+      // A way to know if the user is editing a block or trying to type a new one
+      if (e.target.id === '') return;
+      if (goog.style.isElementShown(goog.dom.getElement(Blockly.TypeBlock.typeBlockDiv_))) {
+        // Enter in the panel makes it select an option
+        if (e.keyCode === 13) Blockly.TypeBlock.hide();
+      }
+      else {
+        Blockly.TypeBlock.show();
+        // Can't seem to make Firefox display first character, so keep all browsers from automatically
+        // displaying the first character and add it manually.
+        e.preventDefault();
+        goog.dom.getElement(Blockly.TypeBlock.inputText_).value =
+  	String.fromCharCode(e.charCode != null ? e.charCode : e.keycode);
+      }
     }
   };
-
   goog.events.listen(Blockly.TypeBlock.docKh_, 'key', Blockly.TypeBlock.handleKey);
   // Create the auto-complete panel
   Blockly.TypeBlock.createAutoComplete_(Blockly.TypeBlock.inputText_);
@@ -48687,7 +48700,6 @@ Blockly.TypeBlock.needsReload = {
  * @private
  */
 Blockly.TypeBlock.lazyLoadOfOptions_ = function () {
-
   // Optimisation to avoid reloading all components and built-in objects unless it is needed.
   // needsReload.components is setup when adding/renaming/removing a component in components.js
   if (this.needsReload.components){
@@ -48709,7 +48721,6 @@ Blockly.TypeBlock.lazyLoadOfOptions_ = function () {
  * example of how to call this function.
  */
 Blockly.TypeBlock.generateOptions = function() {
-
   var buildListOfOptions = function() {
     var listOfOptions = {};
     var typeblockArray;
@@ -56241,8 +56252,22 @@ Blockly.onKeyDown_ = function(e) {
     // Delete or backspace.
     try {
       if (Blockly.selected && Blockly.selected.isDeletable()) {
-        Blockly.hideChaff();
-        Blockly.selected.dispose(true, true);
+        var descendantCount = Blockly.selected.getDescendants().length;
+        if (Blockly.selected.nextConnection && Blockly.selected.nextConnection.targetConnection) {
+          descendantCount -= Blockly.selected.nextConnection.targetBlock().
+            getDescendants().length;
+        }
+        // Ask for confirmation before deleting 3 or more blocks
+        if (descendantCount >= 3) {
+          if (confirm("Are you sure you want to delete all " + descendantCount + " of these blocks?")) {
+            Blockly.hideChaff();
+            Blockly.selected.dispose(true, true);
+          }
+        }
+        else {
+          Blockly.hideChaff();
+          Blockly.selected.dispose(true, true);
+        }
       }
     } finally {
       // Stop the browser from going back to the previous page.
@@ -56914,7 +56939,7 @@ Blockly.LANG_CONTROLS_CHOOSE_TITLE = 'if'
 Blockly.LANG_CONTROLS_CHOOSE_INPUT_TEST = '';
 Blockly.LANG_CONTROLS_CHOOSE_INPUT_THEN_RETURN = 'then';
 Blockly.LANG_CONTROLS_CHOOSE_INPUT_ELSE_RETURN = 'else';
-Blockly.LANG_CONTROLS_CHOOSE_COLLAPSED_TEXT = 'if'; 
+Blockly.LANG_CONTROLS_CHOOSE_COLLAPSED_TEXT = 'if';
 Blockly.LANG_CONTROLS_CHOOSE_TOOLTIP = 'If the condition being tested is true,'
   + 'return the result of evaluating the expression attached to the \'then-return\' slot;'
   + 'otherwise return the result of evaluating the expression attached to the \'else-return\' slot;'
@@ -56931,7 +56956,7 @@ Blockly.LANG_CONTROLS_EVAL_BUT_IGNORE_HELPURL = 'http://appinventor.mit.edu/expl
 Blockly.LANG_CONTROLS_EVAL_BUT_COLLAPSED_TEXT = 'eval but ignore'
 Blockly.LANG_CONTROLS_EVAL_BUT_IGNORE_TOOLTIP = 'Runs the connected block of code and ignores the return value (if any). Useful if need to call a procedure with a return value but don\'t need the value.';
 
-/* [lyn, 10/14/13] Removed for now. May come back some day. 
+/* [lyn, 10/14/13] Removed for now. May come back some day.
 Blockly.LANG_CONTROLS_NOTHING_TITLE = 'nothing';
 Blockly.LANG_CONTROLS_NOTHING_HELPURL = 'http://appinventor.mit.edu/explore/ai2/support/blocks/control#nothing';
 Blockly.LANG_CONTROLS_NOTHING_TOOLTIP = 'Returns nothing. Used to initialize variables or can be plugged into a return socket if no value needed to return. this is equivalent to null or None.';
@@ -57534,7 +57559,7 @@ Blockly.LANG_VARIABLES_LOCAL_DECLARATION_COLLAPSED_TEXT = 'local';
 Blockly.LANG_VARIABLES_LOCAL_DECLARATION_TOOLTIP = 'Allows you to create variables that are only accessible in the do part of this block.';
 
 Blockly.LANG_VARIABLES_LOCAL_DECLARATION_EXPRESSION_HELPURL = 'http://appinventor.mit.edu/explore/ai2/support/blocks/variables#return';
-/* // These don't differ between the statement and expression 
+/* // These don't differ between the statement and expression
 Blockly.LANG_VARIABLES_LOCAL_DECLARATION_EXPRESSION_TITLE_INIT = 'initialize local';
 Blockly.LANG_VARIABLES_LOCAL_DECLARATION_EXPRESSION_INPUT_NAME = 'name';
 Blockly.LANG_VARIABLES_LOCAL_DECLARATION_EXPRESSION_INPUT_TO = 'to';
@@ -57652,7 +57677,7 @@ Blockly.LANG_COMPONENT_BLOCK_LABEL_PROPERTIES_HELPURL = '/reference/components/u
 Blockly.LANG_COMPONENT_BLOCK_LABEL_EVENTS_HELPURL = '/reference/components/userinterface.html#labelevents';
 Blockly.LANG_COMPONENT_BLOCK_LABEL_METHODS_HELPURL = '/reference/components/userinterface.html#labelmethods';
 
-Blockly.LANG_COMPONENT_BLOCK_LISTPICKET_HELPURL = '/reference/components/userinterface.html#ListPicker';
+Blockly.LANG_COMPONENT_BLOCK_LISTPICKER_HELPURL = '/reference/components/userinterface.html#ListPicker';
 Blockly.LANG_COMPONENT_BLOCK_LISTPICKER_PROPERTIES_HELPURL = '/reference/components/userinterface.html#listpickerproperties';
 Blockly.LANG_COMPONENT_BLOCK_LISTPICKER_EVENTS_HELPURL = '/reference/components/userinterface.html#listpickerevents';
 Blockly.LANG_COMPONENT_BLOCK_LISTPICKER_METHODS_HELPURL = '/reference/components/userinterface.html#listpickermethods';
@@ -57665,7 +57690,7 @@ Blockly.LANG_COMPONENT_BLOCK_NOTIFIER_METHODS_HELPURL = '/reference/components/u
 Blockly.LANG_COMPONENT_BLOCK_PASSWORDTEXTBOX_HELPURL = '/reference/components/userinterface.html#PasswordTextBox';
 Blockly.LANG_COMPONENT_BLOCK_PASSWORDTEXTBOX_PROPERTIES_HELPURL = '/reference/components/userinterface.html#pwdboxproperties';
 Blockly.LANG_COMPONENT_BLOCK_PASSWORDTEXTBOX_EVENTS_HELPURL = '/reference/components/userinterface.html#pwdboxevents';
-Blockly.LANG_COMPONENT_BLOCK_PASSWORDTEXTBOX__METHODS_HELPURL = '/reference/components/userinterface.html#pwdboxmethods';
+Blockly.LANG_COMPONENT_BLOCK_PASSWORDTEXTBOX_METHODS_HELPURL = '/reference/components/userinterface.html#pwdboxmethods';
 
 Blockly.LANG_COMPONENT_BLOCK_SCREEN_HELPURL = '/reference/components/userinterface.html#Screen';
 Blockly.LANG_COMPONENT_BLOCK_SCREEN_PROPERTIES_HELPURL = '/reference/components/userinterface.html#screenproperties';
@@ -57706,6 +57731,7 @@ Blockly.LANG_COMPONENT_BLOCK_CAMCORDER_METHODS_HELPURL = '/reference/components/
 Blockly.LANG_COMPONENT_BLOCK_CAMERA_HELPURL = '/reference/components/media.html#Camera';
 Blockly.LANG_COMPONENT_BLOCK_CAMERA_PROPERTIES_HELPURL = '/reference/components/media.html#cameraproperties';
 Blockly.LANG_COMPONENT_BLOCK_CAMERA_EVENTS_HELPURL = '/reference/components/media.html#cameraevents';
+Blockly.LANG_COMPONENT_BLOCK_CAMERA_METHODS_HELPURL = '/reference/components/media.html#cameramethods';
 
 Blockly.LANG_COMPONENT_BLOCK_IMAGEPICKER_HELPURL = '/reference/components/media.html#ImagePicker';
 Blockly.LANG_COMPONENT_BLOCK_IMAGEPICKER_PROPERTIES_HELPURL = '/reference/components/media.html#imagepickerproperties';
@@ -57732,10 +57758,10 @@ Blockly.LANG_COMPONENT_BLOCK_SPEECHRECOGNIZER_PROPERTIES_HELPURL = '/reference/c
 Blockly.LANG_COMPONENT_BLOCK_SPEECHRECOGNIZER_EVENTS_HELPURL = '/reference/components/media.html#speechrecognizerevents';
 Blockly.LANG_COMPONENT_BLOCK_SPEECHRECOGNIZER_METHODS_HELPURL = '/reference/components/media.html#speechrecognizermethods';
 
-Blockly.LANG_COMPONENT_BLOCK_TEXTOSPEECH_HELPURL = "/reference/components/media.html#TextToSpeech";
-Blockly.LANG_COMPONENT_BLOCK_TEXTOSPEECH_PROPERTIES_HELPURL = '/reference/components/media.html#texttospeechproperties';
-Blockly.LANG_COMPONENT_BLOCK_TEXTOSPEECH_EVENTS_HELPURL = '/reference/components/media.html#texttospeechevents';
-Blockly.LANG_COMPONENT_BLOCK_TEXTOSPEECH_METHODS_HELPURL = '/reference/components/media.html#texttospeechmethods';
+Blockly.LANG_COMPONENT_BLOCK_TEXTTOSPEECH_HELPURL = "/reference/components/media.html#TextToSpeech";
+Blockly.LANG_COMPONENT_BLOCK_TEXTTOSPEECH_PROPERTIES_HELPURL = '/reference/components/media.html#texttospeechproperties';
+Blockly.LANG_COMPONENT_BLOCK_TEXTTOSPEECH_EVENTS_HELPURL = '/reference/components/media.html#texttospeechevents';
+Blockly.LANG_COMPONENT_BLOCK_TEXTTOSPEECH_METHODS_HELPURL = '/reference/components/media.html#texttospeechmethods';
 
 Blockly.LANG_COMPONENT_BLOCK_VIDEOPLAYER_HELPURL = '/reference/components/media.html#VideoPlayer';
 Blockly.LANG_COMPONENT_BLOCK_VIDEOPLAYER_PROPERTIES_HELPURL = '/reference/components/media.html#videoplayerproperties';
@@ -57759,25 +57785,25 @@ Blockly.LANG_COMPONENT_BLOCK_IMAGESPRITE_EVENTS_HELPURL = '/reference/components
 Blockly.LANG_COMPONENT_BLOCK_IMAGESPRITE_METHODS_HELPURL = '/reference/components/animation.html#imagespritemethods';
 
 //Sensor components
-Blockly.LANG_COMPONENT_BLOCK_ACCELEROMETERSENSOR_HELPURL = "/reference/components/sensor.html#AccelerometerSensor";
-Blockly.LANG_COMPONENT_BLOCK_ACCELEROMETERSENSOR_PROPERTIES_HELPURL = '/reference/components/sensor.html#accelerometersensorproperties';
-Blockly.LANG_COMPONENT_BLOCK_ACCELEROMETERSENSOR_EVENTS_HELPURL = '/reference/components/sensor.html#accelerometersensorevents';
-Blockly.LANG_COMPONENT_BLOCK_ACCELEROMETERSENSOR_METHODS_HELPURL = '/reference/components/sensor.html#accelerometersensormethods';
+Blockly.LANG_COMPONENT_BLOCK_ACCELEROMETERSENSOR_HELPURL = "/reference/components/sensors.html#AccelerometerSensor";
+Blockly.LANG_COMPONENT_BLOCK_ACCELEROMETERSENSOR_PROPERTIES_HELPURL = '/reference/components/sensors.html#accelerometersensorproperties';
+Blockly.LANG_COMPONENT_BLOCK_ACCELEROMETERSENSOR_EVENTS_HELPURL = '/reference/components/sensors.html#accelerometersensorevents';
+Blockly.LANG_COMPONENT_BLOCK_ACCELEROMETERSENSOR_METHODS_HELPURL = '/reference/components/sensors.html#accelerometersensormethods';
 
-Blockly.LANG_COMPONENT_BLOCK_BARCODESCANNER_HELPURL = "/reference/components/sensor.html#BarcodeScanner";
-Blockly.LANG_COMPONENT_BLOCK_BARCODESCANNER_PROPERTIES_HELPURL = '/reference/components/sensor.html#barcodescannerproperties';
-Blockly.LANG_COMPONENT_BLOCK_BARCODESCANNER_EVENTS_HELPURL = '/reference/components/sensor.html#barcodescannerevents';
-Blockly.LANG_COMPONENT_BLOCK_BARCODESCANNER_METHODS_HELPURL = '/reference/components/sensor.html#barcodescannermethods';
+Blockly.LANG_COMPONENT_BLOCK_BARCODESCANNER_HELPURL = "/reference/components/sensors.html#BarcodeScanner";
+Blockly.LANG_COMPONENT_BLOCK_BARCODESCANNER_PROPERTIES_HELPURL = '/reference/components/sensors.html#barcodescannerproperties';
+Blockly.LANG_COMPONENT_BLOCK_BARCODESCANNER_EVENTS_HELPURL = '/reference/components/sensors.html#barcodescannerevents';
+Blockly.LANG_COMPONENT_BLOCK_BARCODESCANNER_METHODS_HELPURL = '/reference/components/sensors.html#barcodescannermethods';
 
-Blockly.LANG_COMPONENT_BLOCK_LOCATIONSENSOR_HELPURL = "/reference/components/sensor.html#LocationSensor";
-Blockly.LANG_COMPONENT_BLOCK_LOCATIONSENSOR_PROPERTIES_HELPURL = '/reference/components/sensor.html#locationsensorproperties';
-Blockly.LANG_COMPONENT_BLOCK_LOCATIONSENSOR_EVENTS_HELPURL = '/reference/components/sensor.html#locationsensorevents';
-Blockly.LANG_COMPONENT_BLOCK_LOCATIONSENSOR_METHODS_HELPURL = '/reference/components/sensor.html#locationsensormethods';
+Blockly.LANG_COMPONENT_BLOCK_LOCATIONSENSOR_HELPURL = "/reference/components/sensors.html#LocationSensor";
+Blockly.LANG_COMPONENT_BLOCK_LOCATIONSENSOR_PROPERTIES_HELPURL = '/reference/components/sensors.html#locationsensorproperties';
+Blockly.LANG_COMPONENT_BLOCK_LOCATIONSENSOR_EVENTS_HELPURL = '/reference/components/sensors.html#locationsensorevents';
+Blockly.LANG_COMPONENT_BLOCK_LOCATIONSENSOR_METHODS_HELPURL = '/reference/components/sensors.html#locationsensormethods';
 
-Blockly.LANG_COMPONENT_BLOCK_ORIENTATIONSENSOR_HELPURL = "/reference/components/sensor.html#OrientationSensor";
-Blockly.LANG_COMPONENT_BLOCK_ORIENTATIONSENSOR_PROPERTIES_HELPURL = '/reference/components/sensor.html#orientationsensorproperties';
-Blockly.LANG_COMPONENT_BLOCK_ORIENTATIONSENSOR_EVENTS_HELPURL = '/reference/components/sensor.html#orientationsensorevents';
-Blockly.LANG_COMPONENT_BLOCK_ORIENTATIONSENSOR_METHODS_HELPURL = '/reference/components/sensor.html#orientationsensormethods';
+Blockly.LANG_COMPONENT_BLOCK_ORIENTATIONSENSOR_HELPURL = "/reference/components/sensors.html#OrientationSensor";
+Blockly.LANG_COMPONENT_BLOCK_ORIENTATIONSENSOR_PROPERTIES_HELPURL = '/reference/components/sensors.html#orientationsensorproperties';
+Blockly.LANG_COMPONENT_BLOCK_ORIENTATIONSENSOR_EVENTS_HELPURL = '/reference/components/sensors.html#orientationsensorevents';
+Blockly.LANG_COMPONENT_BLOCK_ORIENTATIONSENSOR_METHODS_HELPURL = '/reference/components/sensors.html#orientationsensormethods';
 
 //Social components
 Blockly.LANG_COMPONENT_BLOCK_CONTACTPICKER_HELPURL = "/reference/components/social.html#ContactPicker";
@@ -58519,7 +58545,10 @@ Blockly.BlocklyEditor.startup = function(documentBody, formName) {
   var viewblock_config = {
     frame: 'ai_frame',
     viewBlockDiv: 'ai_view_block',
-    inputText: 'ac_view_input_text'
+    inputText: 'ac_view_input_text', 
+    previous: 'ac_button_previous', 
+    next: 'ac_button_next', 
+    matchesText: 'ac_matches_text'
   };
 
   //This is what Blockly's init function does when passing options.
@@ -59049,7 +59078,7 @@ if (!Blockly.DrawerInit) Blockly.DrawerInit = {};
  */
 Blockly.Drawer.createDom = function() {
   Blockly.Drawer.flyout_ = new Blockly.Flyout();
-  // insert the flyout after the main workspace (except, there's no 
+  // insert the flyout after the main workspace (except, there's no
   // svg.insertAfter method, so we need to insert before the thing following
   // the main workspace. Neil Fraser says: this is "less hacky than it looks".
   var flyoutGroup = Blockly.Drawer.flyout_.createDom();
@@ -59065,7 +59094,7 @@ Blockly.Drawer.init = function() {
   for (var name in Blockly.DrawerInit) {
     Blockly.DrawerInit[name]();
   }
-  
+
   Blockly.Drawer.languageTree = Blockly.Drawer.buildTree_();
 };
 
@@ -59077,7 +59106,7 @@ Blockly.Drawer.init = function() {
 Blockly.Drawer.PREFIX_ = 'cat_';
 
 /**
- * Build the hierarchical tree of block types. 
+ * Build the hierarchical tree of block types.
  * Note: taken from Blockly's toolbox.js
  * @return {!Object} Tree object.
  * @private
@@ -59102,7 +59131,7 @@ Blockly.Drawer.buildTree_ = function() {
 
 /**
  * Show the contents of the built-in drawer named drawerName. drawerName
- * should be one of Blockly.MSG_VARIABLE_CATEGORY, 
+ * should be one of Blockly.MSG_VARIABLE_CATEGORY,
  * Blockly.MSG_PROCEDURE_CATEGORY, or one of the built-in block categories.
  * @param drawerName
  */
@@ -59111,7 +59140,7 @@ Blockly.Drawer.showBuiltin = function(drawerName) {
   var blockSet = Blockly.Drawer.languageTree[drawerName];
   if(drawerName == "cat_Procedures") {
     var newBlockSet = [];
-    for(var i=0;i<blockSet.length;i++) {      
+    for(var i=0;i<blockSet.length;i++) {
       if(!(blockSet[i] == "procedures_callnoreturn" // Include callnoreturn only if at least one defnoreturn declaration
            && JSON.stringify(Blockly.AIProcedure.getProcedureNames(false))
               == JSON.stringify([Blockly.FieldProcedure.defaultValue]))
@@ -59144,14 +59173,14 @@ Blockly.Drawer.showComponent = function(instanceName) {
     var xmlList = Blockly.Drawer.instanceNameToXMLArray(instanceName);
     Blockly.Drawer.flyout_.show(xmlList);
   } else {
-    console.log("Got call to Blockly.Drawer.showComponent(" +  instanceName + 
+    console.log("Got call to Blockly.Drawer.showComponent(" +  instanceName +
                 ") - unknown component name");
   }
 };
 
 /**
- * Show the contents of the generic component drawer named drawerName. (This is under the 
- * "Any components" section in App Inventor). drawerName should be the name of a component type for 
+ * Show the contents of the generic component drawer named drawerName. (This is under the
+ * "Any components" section in App Inventor). drawerName should be the name of a component type for
  * which we have at least one component instance in the blocks workspace. If no such component
  * type is found, currently we just log a message to the console and do nothing.
  * @param drawerName
@@ -59163,7 +59192,7 @@ Blockly.Drawer.showGeneric = function(typeName) {
     var xmlList = Blockly.Drawer.componentTypeToXMLArray(typeName);
     Blockly.Drawer.flyout_.show(xmlList);
   } else {
-    console.log("Got call to Blockly.Drawer.showGeneric(" +  typeName + 
+    console.log("Got call to Blockly.Drawer.showGeneric(" +  typeName +
                 ") - unknown component type name");
   }
 };
@@ -59418,15 +59447,43 @@ Blockly.Drawer.defaultBlockXMLStrings = {
       '<mutation items="2"></mutation>' +
     '</block>' +
   '</xml>'},
-  component_method: [{matchingMutatorAttributes:{component_type:"TinyDB", method_name:"GetValue"},
-    mutatorXMLStringFunction: function(mutatorAttributes) { return '' +
-    '<xml>' +
-      '<block type="component_method">' +
-      //mutator generator
-      Blockly.Drawer.mutatorAttributesToXMLString(mutatorAttributes) +
-      '<value name="ARG1"><block type="text"><title name="TEXT"></title></block></value>' +
-    '</block>' +
-  '</xml>';}}]
+
+  component_method: [
+    {matchingMutatorAttributes:{component_type:"TinyDB", method_name:"GetValue"},
+     mutatorXMLStringFunction: function(mutatorAttributes) {
+       return '' +
+         '<xml>' +
+         '<block type="component_method">' +
+         //mutator generator
+         Blockly.Drawer.mutatorAttributesToXMLString(mutatorAttributes) +
+         '<value name="ARG1"><block type="text"><title name="TEXT"></title></block></value>' +
+         '</block>' +
+         '</xml>';}},
+
+    // Notifer.ShowTextDialog has cancelable default to TRUE
+    {matchingMutatorAttributes:{component_type:"Notifier", method_name:"ShowTextDialog"},
+     mutatorXMLStringFunction: function(mutatorAttributes) {
+       return '' +
+         '<xml>' +
+         '<block type="component_method">' +
+         //mutator generator
+         Blockly.Drawer.mutatorAttributesToXMLString(mutatorAttributes) +
+         '<value name="ARG2"><block type="logic_boolean"><title name="BOOL">TRUE</title></block></value>' +
+         '</block>' +
+         '</xml>';}},
+
+    // Notifer.ShowChooseDialog has cancelable default to TRUE
+    {matchingMutatorAttributes:{component_type:"Notifier", method_name:"ShowChooseDialog"},
+     mutatorXMLStringFunction: function(mutatorAttributes) {
+       return '' +
+         '<xml>' +
+         '<block type="component_method">' +
+         //mutator generator
+         Blockly.Drawer.mutatorAttributesToXMLString(mutatorAttributes) +
+         '<value name="ARG4"><block type="logic_boolean"><title name="BOOL">TRUE</title></block></value>' +
+         '</block>' +
+         '</xml>';}}
+  ]
 };
 // Copyright 2012 Massachusetts Institute of Technology. All rights reserved.
 
@@ -60681,6 +60738,26 @@ Blockly.WarningHandler.setBlockError = function(message){
     Blockly.WarningHandler.updateWarningErrorCount();
   }
   this.setErrorIconText(message);
+}
+
+// Check a disposed block for any errors or warnings and update state accordingly.
+Blockly.WarningHandler.checkDisposedBlock = function(){
+  if(this.warning) {
+    this.setWarningText(null);
+  }
+  if(this.errorIcon) {
+    this.setErrorIconText(null);
+  }
+  if(this.hasWarning) {
+    this.hasWarning = false;
+    Blockly.WarningHandler.warningCount--;
+    Blockly.WarningHandler.updateWarningErrorCount();
+  }
+  if(this.hasError) {
+    this.hasError = false;
+    Blockly.WarningHandler.errorCount--;
+    Blockly.WarningHandler.updateWarningErrorCount();
+  }
 }
 
 //Warnings
@@ -67154,7 +67231,7 @@ Blockly.ComponentBlock.HELPURLS = {
   "Clock": Blockly.LANG_COMPONENT_BLOCK_CLOCK_HELPURL,
   "Image": Blockly.LANG_COMPONENT_BLOCK_IMAGE_HELPURL,
   "Label": Blockly.LANG_COMPONENT_BLOCK_LABEL_HELPURL,
-  "ListPicker": Blockly.LANG_COMPONENT_BLOCK_LISTPICKET_HELPURL,
+  "ListPicker": Blockly.LANG_COMPONENT_BLOCK_LISTPICKER_HELPURL,
   "PasswordTextBox": Blockly.LANG_COMPONENT_BLOCK_PASSWORDTEXTBOX_HELPURL,
   "Screen": Blockly.LANG_COMPONENT_BLOCK_SCREEN_HELPURL,
   "Slider": Blockly.LANG_COMPONENT_BLOCK_SLIDER_HELPURL,
@@ -67192,7 +67269,7 @@ Blockly.ComponentBlock.HELPURLS = {
   "BluetoothClient": Blockly.LANG_COMPONENT_BLOCK_BLUETOOTHCLIENT_HELPURL,
   "BluetoothServer": Blockly.LANG_COMPONENT_BLOCK_BLUETOOTHSERVER_HELPURL,
   "Notifier": Blockly.LANG_COMPONENT_BLOCK_NOTIFIER_HELPURL,
-  "SpeechRecognizer": Blockly.LANG_COMPONENT_BLOCK_SPEECHRECOGNITION_HELPURL,
+  "SpeechRecognizer": Blockly.LANG_COMPONENT_BLOCK_SPEECHRECOGNIZER_HELPURL,
   "TextToSpeech": Blockly.LANG_COMPONENT_BLOCK_TEXTTOSPEECH_HELPURL,
   "TinyWebDB": Blockly.LANG_COMPONENT_BLOCK_TINYWEBDB_HELPURL,
   "Web": Blockly.LANG_COMPONENT_BLOCK_WEB_HELPURL,
@@ -67210,7 +67287,7 @@ Blockly.ComponentBlock.PROPERTIES_HELPURLS = {
   "Clock": Blockly.LANG_COMPONENT_BLOCK_CLOCK_PROPERTIES_HELPURL,
   "Image": Blockly.LANG_COMPONENT_BLOCK_IMAGE_PROPERTIES_HELPURL,
   "Label": Blockly.LANG_COMPONENT_BLOCK_LABEL_PROPERTIES_HELPURL,
-  "ListPicker": Blockly.LANG_COMPONENT_BLOCK_LISTPICKET_PROPERTIES_HELPURL,
+  "ListPicker": Blockly.LANG_COMPONENT_BLOCK_LISTPICKER_PROPERTIES_HELPURL,
   "PasswordTextBox": Blockly.LANG_COMPONENT_BLOCK_PASSWORDTEXTBOX_PROPERTIES_HELPURL,
   "Screen": Blockly.LANG_COMPONENT_BLOCK_SCREEN_PROPERTIES_HELPURL,
   "Slider": Blockly.LANG_COMPONENT_BLOCK_SLIDER_PROPERTIES_HELPURL,
@@ -67248,7 +67325,7 @@ Blockly.ComponentBlock.PROPERTIES_HELPURLS = {
   "BluetoothClient": Blockly.LANG_COMPONENT_BLOCK_BLUETOOTHCLIENT_PROPERTIES_HELPURL,
   "BluetoothServer": Blockly.LANG_COMPONENT_BLOCK_BLUETOOTHSERVER_PROPERTIES_HELPURL,
   "Notifier": Blockly.LANG_COMPONENT_BLOCK_NOTIFIER_PROPERTIES_HELPURL,
-  "SpeechRecognizer": Blockly.LANG_COMPONENT_BLOCK_SPEECHRECOGNITION_PROPERTIES_HELPURL,
+  "SpeechRecognizer": Blockly.LANG_COMPONENT_BLOCK_SPEECHRECOGNIZER_PROPERTIES_HELPURL,
   "TextToSpeech": Blockly.LANG_COMPONENT_BLOCK_TEXTTOSPEECH_PROPERTIES_HELPURL,
   "TinyWebDB": Blockly.LANG_COMPONENT_BLOCK_TINYWEBDB_PROPERTIES_HELPURL,
   "Web": Blockly.LANG_COMPONENT_BLOCK_WEB_PROPERTIES_HELPURL,
@@ -67266,7 +67343,7 @@ Blockly.ComponentBlock.EVENTS_HELPURLS = {
   "CheckBox": Blockly.LANG_COMPONENT_BLOCK_CHECKBOX_EVENTS_HELPURL,
   "Image": Blockly.LANG_COMPONENT_BLOCK_IMAGE_EVENTS_HELPURL,
   "Label": Blockly.LANG_COMPONENT_BLOCK_LABEL_EVENTS_HELPURL,
-  "ListPicker": Blockly.LANG_COMPONENT_BLOCK_LISTPICKET_EVENTS_HELPURL,
+  "ListPicker": Blockly.LANG_COMPONENT_BLOCK_LISTPICKER_EVENTS_HELPURL,
   "PasswordTextBox": Blockly.LANG_COMPONENT_BLOCK_PASSWORDTEXTBOX_EVENTS_HELPURL,
   "Screen": Blockly.LANG_COMPONENT_BLOCK_SCREEN_EVENTS_HELPURL,
   "Slider": Blockly.LANG_COMPONENT_BLOCK_SLIDER_EVENTS_HELPURL,
@@ -67289,12 +67366,7 @@ Blockly.ComponentBlock.EVENTS_HELPURLS = {
   "AccelerometerSensor": Blockly.LANG_COMPONENT_BLOCK_ACCELEROMETERSENSOR_EVENTS_HELPURL,
   "LocationSensor": Blockly.LANG_COMPONENT_BLOCK_LOCATIONSENSOR_EVENTS_HELPURL,
   "OrientationSensor": Blockly.LANG_COMPONENT_BLOCK_ORIENTATIONSENSOR_EVENTS_HELPURL,
-  "HorizontalArrangment": Blockly.LANG_COMPONENT_BLOCK_HORIZARRANGE_EVENTS_HELPURL,
-  "TableArrangement": Blockly.LANG_COMPONENT_BLOCK_TABLEARRANGE_EVENTS_HELPURL,
-  "VerticalArrangement": Blockly.LANG_COMPONENT_BLOCK_VERTARRANGE_EVENTS_HELPURL,
   "NxtColorSensor": Blockly.LANG_COMPONENT_BLOCK_NXTCOLOR_EVENTS_HELPURL,
-  "NxtDirectCommands": Blockly.LANG_COMPONENT_BLOCK_NXTDIRECT_EVENTS_HELPURL,
-  "NxtDrive": Blockly.LANG_COMPONENT_BLOCK_NXTDRIVE_EVENTS_HELPURL,
   "NxtLightSensor": Blockly.LANG_COMPONENT_BLOCK_NXTLIGHT_EVENTS_HELPURL,
   "NxtSoundSensor": Blockly.LANG_COMPONENT_BLOCK_NXTSOUND_EVENTS_HELPURL,
   "NxtTouchSensor": Blockly.LANG_COMPONENT_BLOCK_NXTTOUCH_EVENTS_HELPURL,
@@ -67304,7 +67376,7 @@ Blockly.ComponentBlock.EVENTS_HELPURLS = {
   "BluetoothClient": Blockly.LANG_COMPONENT_BLOCK_BLUETOOTHCLIENT_EVENTS_HELPURL,
   "BluetoothServer": Blockly.LANG_COMPONENT_BLOCK_BLUETOOTHSERVER_EVENTS_HELPURL,
   "Notifier": Blockly.LANG_COMPONENT_BLOCK_NOTIFIER_EVENTS_HELPURL,
-  "SpeechRecognizer": Blockly.LANG_COMPONENT_BLOCK_SPEECHRECOGNITION_EVENTS_HELPURL,
+  "SpeechRecognizer": Blockly.LANG_COMPONENT_BLOCK_SPEECHRECOGNIZER_EVENTS_HELPURL,
   "TextToSpeech": Blockly.LANG_COMPONENT_BLOCK_TEXTTOSPEECH_EVENTS_HELPURL,
   "TinyWebDB": Blockly.LANG_COMPONENT_BLOCK_TINYWEBDB_EVENTS_HELPURL,
   "Web": Blockly.LANG_COMPONENT_BLOCK_WEB_EVENTS_HELPURL,
@@ -67343,9 +67415,6 @@ Blockly.ComponentBlock.METHODS_HELPURLS = {
    "AccelerometerSensor": Blockly.LANG_COMPONENT_BLOCK_ACCELEROMETERSENSOR_METHODS_HELPURL,
    "LocationSensor": Blockly.LANG_COMPONENT_BLOCK_LOCATIONSENSOR_METHODS_HELPURL,
    "OrientationSensor": Blockly.LANG_COMPONENT_BLOCK_ORIENTATIONSENSOR_METHODS_HELPURL,
-   "HorizontalArrangment": Blockly.LANG_COMPONENT_BLOCK_HORIZARRANGE_METHODS_HELPURL,
-   "TableArrangement": Blockly.LANG_COMPONENT_BLOCK_TABLEARRANGE_METHODS_HELPURL,
-   "VerticalArrangement": Blockly.LANG_COMPONENT_BLOCK_VERTARRANGE_METHODS_HELPURL,
    "NxtColorSensor": Blockly.LANG_COMPONENT_BLOCK_NXTCOLOR_METHODS_HELPURL,
    "NxtDirectCommands": Blockly.LANG_COMPONENT_BLOCK_NXTDIRECT_METHODS_HELPURL,
    "NxtDrive": Blockly.LANG_COMPONENT_BLOCK_NXTDRIVE_METHODS_HELPURL,
@@ -67358,7 +67427,7 @@ Blockly.ComponentBlock.METHODS_HELPURLS = {
    "BluetoothClient": Blockly.LANG_COMPONENT_BLOCK_BLUETOOTHCLIENT_METHODS_HELPURL,
    "BluetoothServer": Blockly.LANG_COMPONENT_BLOCK_BLUETOOTHSERVER_METHODS_HELPURL,
    "Notifier": Blockly.LANG_COMPONENT_BLOCK_NOTIFIER_METHODS_HELPURL,
-   "SpeechRecognizer": Blockly.LANG_COMPONENT_BLOCK_SPEECHRECOGNITION_METHODS_HELPURL,
+   "SpeechRecognizer": Blockly.LANG_COMPONENT_BLOCK_SPEECHRECOGNIZER_METHODS_HELPURL,
    "TextToSpeech": Blockly.LANG_COMPONENT_BLOCK_TEXTTOSPEECH_METHODS_HELPURL,
    "TinyWebDB": Blockly.LANG_COMPONENT_BLOCK_TINYWEBDB_METHODS_HELPURL,
    "Web": Blockly.LANG_COMPONENT_BLOCK_WEB_METHODS_HELPURL,
@@ -69079,7 +69148,7 @@ Blockly.Yail.controls_if = function() {
     var branch = Blockly.Yail.statementToCode(this, 'ELSE') || Blockly.Yail.YAIL_FALSE;
     code += Blockly.Yail.YAIL_SPACER + Blockly.Yail.YAIL_BEGIN + branch + Blockly.Yail.YAIL_CLOSE_COMBINATION;
   }
-  
+
   for(var i=0;i<this.elseifCount_;i++){
     code += Blockly.Yail.YAIL_CLOSE_COMBINATION + Blockly.Yail.YAIL_CLOSE_COMBINATION;
   }
@@ -69094,8 +69163,8 @@ Blockly.Yail.controls_choose = function() {
   var thenReturn = Blockly.Yail.valueToCode(this, 'THENRETURN', Blockly.Yail.ORDER_NONE) || Blockly.Yail.YAIL_FALSE;
   var elseReturn = Blockly.Yail.valueToCode(this, 'ELSERETURN', Blockly.Yail.ORDER_NONE)  || Blockly.Yail.YAIL_FALSE;
   var code = Blockly.Yail.YAIL_IF + test
-             + Blockly.Yail.YAIL_SPACER +  thenReturn 
-             + Blockly.Yail.YAIL_SPACER +  elseReturn 
+             + Blockly.Yail.YAIL_SPACER +  thenReturn
+             + Blockly.Yail.YAIL_SPACER +  elseReturn
              + Blockly.Yail.YAIL_CLOSE_COMBINATION;
   return [code,Blockly.Yail.ORDER_ATOMIC];
 };
@@ -69115,7 +69184,7 @@ Blockly.Yail.controls_forEach = function() {
   var listCode = Blockly.Yail.valueToCode(this, 'LIST', Blockly.Yail.ORDER_NONE) || emptyListCode;
   var bodyCode = Blockly.Yail.statementToCode(this, 'DO', Blockly.Yail.ORDER_NONE) ||  Blockly.Yail.YAIL_FALSE;
   return Blockly.Yail.YAIL_FOREACH + loopIndexName + Blockly.Yail.YAIL_SPACER
-         + Blockly.Yail.YAIL_BEGIN + bodyCode + Blockly.Yail.YAIL_CLOSE_COMBINATION + Blockly.Yail.YAIL_SPACER 
+         + Blockly.Yail.YAIL_BEGIN + bodyCode + Blockly.Yail.YAIL_CLOSE_COMBINATION + Blockly.Yail.YAIL_SPACER
          + listCode + Blockly.Yail.YAIL_CLOSE_COMBINATION;
 };
 
@@ -69128,9 +69197,9 @@ Blockly.Yail.controls_forRange = function() {
   var stepCode = Blockly.Yail.valueToCode(this, 'STEP', Blockly.Yail.ORDER_NONE) || 0;
   var bodyCode = Blockly.Yail.statementToCode(this, 'DO', Blockly.Yail.ORDER_NONE) || Blockly.Yail.YAIL_FALSE;
   return Blockly.Yail.YAIL_FORRANGE + loopIndexName + Blockly.Yail.YAIL_SPACER
-         + Blockly.Yail.YAIL_BEGIN + bodyCode + Blockly.Yail.YAIL_CLOSE_COMBINATION + Blockly.Yail.YAIL_SPACER 
-         + startCode + Blockly.Yail.YAIL_SPACER 
-         + endCode + Blockly.Yail.YAIL_SPACER 
+         + Blockly.Yail.YAIL_BEGIN + bodyCode + Blockly.Yail.YAIL_CLOSE_COMBINATION + Blockly.Yail.YAIL_SPACER
+         + startCode + Blockly.Yail.YAIL_SPACER
+         + endCode + Blockly.Yail.YAIL_SPACER
          + stepCode + Blockly.Yail.YAIL_CLOSE_COMBINATION;
 };
 
@@ -69146,7 +69215,7 @@ Blockly.Yail.controls_while = function() {
   return code;
 };
 
-// [lyn, 01/15/2013] Added 
+// [lyn, 01/15/2013] Added
 Blockly.Yail.controls_do_then_return = function() {
   var stm = Blockly.Yail.statementToCode(this, 'STM', Blockly.Yail.ORDER_NONE) || Blockly.Yail.YAIL_FALSE;
   var value = Blockly.Yail.valueToCode(this, 'VALUE', Blockly.Yail.ORDER_NONE) || Blockly.Yail.YAIL_FALSE;
@@ -69154,16 +69223,19 @@ Blockly.Yail.controls_do_then_return = function() {
   return [code, Blockly.Yail.ORDER_ATOMIC];
 };
 
-// [lyn, 01/15/2013] Added 
+ // [lyn, 01/15/2013] Added
+// adding 'ignored' here is only for the printout in Do-It.  The value will be ignored because the block shape
+// has no output
 Blockly.Yail.controls_eval_but_ignore = function() {
-  var value = Blockly.Yail.valueToCode(this, 'VALUE', Blockly.Yail.ORDER_NONE) || Blockly.Yail.YAIL_FALSE;
-  return Blockly.Yail.YAIL_BEGIN + value + Blockly.Yail.YAIL_SPACER + 'null' + Blockly.Yail.YAIL_CLOSE_COMBINATION;
-}
+  var toEval = Blockly.Yail.valueToCode(this, 'VALUE', Blockly.Yail.ORDER_NONE) || Blockly.Yail.YAIL_FALSE;
+  var code = Blockly.Yail.YAIL_BEGIN + toEval + Blockly.Yail.YAIL_SPACER + '"ignored"' + Blockly.Yail.YAIL_CLOSE_COMBINATION;
+  return code;
+};
 
-// [lyn, 01/15/2013] Added 
+// [lyn, 01/15/2013] Added
 Blockly.Yail.controls_nothing = function() {
   return ['*the-null-value*', Blockly.Yail.ORDER_NONE];
-}
+};
 
 Blockly.Yail.controls_openAnotherScreen = function() {
   // Open another screen
@@ -78072,6 +78144,433 @@ goog.crypt.Hmac.prototype.getHmac = function(message) {
   this.update(message);
   return this.digest();
 };
+// Copyright 2008 The Closure Library Authors. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS-IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+/**
+ * @fileoverview Namespace with crypto related helper functions.
+ */
+
+goog.provide('goog.crypt');
+
+goog.require('goog.array');
+
+
+/**
+ * Turns a string into an array of bytes; a "byte" being a JS number in the
+ * range 0-255.
+ * @param {string} str String value to arrify.
+ * @return {!Array.<number>} Array of numbers corresponding to the
+ *     UCS character codes of each character in str.
+ */
+goog.crypt.stringToByteArray = function(str) {
+  var output = [], p = 0;
+  for (var i = 0; i < str.length; i++) {
+    var c = str.charCodeAt(i);
+    while (c > 0xff) {
+      output[p++] = c & 0xff;
+      c >>= 8;
+    }
+    output[p++] = c;
+  }
+  return output;
+};
+
+
+/**
+ * Turns an array of numbers into the string given by the concatenation of the
+ * characters to which the numbers correspond.
+ * @param {Array} array Array of numbers representing characters.
+ * @return {string} Stringification of the array.
+ */
+goog.crypt.byteArrayToString = function(array) {
+  return String.fromCharCode.apply(null, array);
+};
+
+
+/**
+ * Turns an array of numbers into the hex string given by the concatenation of
+ * the hex values to which the numbers correspond.
+ * @param {Array} array Array of numbers representing characters.
+ * @return {string} Hex string.
+ */
+goog.crypt.byteArrayToHex = function(array) {
+  return goog.array.map(array, function(numByte) {
+    var hexByte = numByte.toString(16);
+    return hexByte.length > 1 ? hexByte : '0' + hexByte;
+  }).join('');
+};
+
+
+/**
+ * Converts a hex string into an integer array.
+ * @param {string} hexString Hex string of 16-bit integers (two characters
+ *     per integer).
+ * @return {!Array.<number>} Array of {0,255} integers for the given string.
+ */
+goog.crypt.hexToByteArray = function(hexString) {
+  goog.asserts.assert(hexString.length % 2 == 0,
+                      'Key string length must be multiple of 2');
+  var arr = [];
+  for (var i = 0; i < hexString.length; i += 2) {
+    arr.push(parseInt(hexString.substring(i, i + 2), 16));
+  }
+  return arr;
+};
+
+
+/**
+ * Converts a JS string to a UTF-8 "byte" array.
+ * @param {string} str 16-bit unicode string.
+ * @return {Array.<number>} UTF-8 byte array.
+ */
+goog.crypt.stringToUtf8ByteArray = function(str) {
+  // TODO(user): Use native implementations if/when available
+  str = str.replace(/\r\n/g, '\n');
+  var out = [], p = 0;
+  for (var i = 0; i < str.length; i++) {
+    var c = str.charCodeAt(i);
+    if (c < 128) {
+      out[p++] = c;
+    } else if (c < 2048) {
+      out[p++] = (c >> 6) | 192;
+      out[p++] = (c & 63) | 128;
+    } else {
+      out[p++] = (c >> 12) | 224;
+      out[p++] = ((c >> 6) & 63) | 128;
+      out[p++] = (c & 63) | 128;
+    }
+  }
+  return out;
+};
+
+
+/**
+ * Converts a UTF-8 byte array to JavaScript's 16-bit Unicode.
+ * @param {Array.<number>} bytes UTF-8 byte array.
+ * @return {string} 16-bit Unicode string.
+ */
+goog.crypt.utf8ByteArrayToString = function(bytes) {
+  // TODO(user): Use native implementations if/when available
+  var out = [], pos = 0, c = 0;
+  while (pos < bytes.length) {
+    var c1 = bytes[pos++];
+    if (c1 < 128) {
+      out[c++] = String.fromCharCode(c1);
+    } else if (c1 > 191 && c1 < 224) {
+      var c2 = bytes[pos++];
+      out[c++] = String.fromCharCode((c1 & 31) << 6 | c2 & 63);
+    } else {
+      var c2 = bytes[pos++];
+      var c3 = bytes[pos++];
+      out[c++] = String.fromCharCode(
+          (c1 & 15) << 12 | (c2 & 63) << 6 | c3 & 63);
+    }
+  }
+  return out.join('');
+};
+
+
+/**
+ * XOR two byte arrays.
+ * @param {!Array.<number>} bytes1 Byte array 1.
+ * @param {!Array.<number>} bytes2 Byte array 2.
+ * @return {!Array.<number>} Resulting XOR of the two byte arrays.
+ */
+goog.crypt.xorByteArray = function(bytes1, bytes2) {
+  goog.asserts.assert(
+      bytes1.length == bytes2.length,
+      'XOR array lengths must match');
+
+  var result = [];
+  for (var i = 0; i < bytes1.length; i++) {
+    result.push(bytes1[i] ^ bytes2[i]);
+  }
+  return result;
+};
+// Copyright 2007 The Closure Library Authors. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS-IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+/**
+ * @fileoverview Base64 en/decoding. Not much to say here except that we
+ * work with decoded values in arrays of bytes. By "byte" I mean a number
+ * in [0, 255].
+ *
+ * @author doughtie@google.com (Gavin Doughtie)
+ * @author fschneider@google.com (Fritz Schneider)
+ */
+
+goog.provide('goog.crypt.base64');
+goog.require('goog.crypt');
+goog.require('goog.userAgent');
+
+// Static lookup maps, lazily populated by init_()
+
+
+/**
+ * Maps bytes to characters.
+ * @type {Object}
+ * @private
+ */
+goog.crypt.base64.byteToCharMap_ = null;
+
+
+/**
+ * Maps characters to bytes.
+ * @type {Object}
+ * @private
+ */
+goog.crypt.base64.charToByteMap_ = null;
+
+
+/**
+ * Maps bytes to websafe characters.
+ * @type {Object}
+ * @private
+ */
+goog.crypt.base64.byteToCharMapWebSafe_ = null;
+
+
+/**
+ * Maps websafe characters to bytes.
+ * @type {Object}
+ * @private
+ */
+goog.crypt.base64.charToByteMapWebSafe_ = null;
+
+
+/**
+ * Our default alphabet, shared between
+ * ENCODED_VALS and ENCODED_VALS_WEBSAFE
+ * @type {string}
+ */
+goog.crypt.base64.ENCODED_VALS_BASE =
+    'ABCDEFGHIJKLMNOPQRSTUVWXYZ' +
+    'abcdefghijklmnopqrstuvwxyz' +
+    '0123456789';
+
+
+/**
+ * Our default alphabet. Value 64 (=) is special; it means "nothing."
+ * @type {string}
+ */
+goog.crypt.base64.ENCODED_VALS =
+    goog.crypt.base64.ENCODED_VALS_BASE + '+/=';
+
+
+/**
+ * Our websafe alphabet.
+ * @type {string}
+ */
+goog.crypt.base64.ENCODED_VALS_WEBSAFE =
+    goog.crypt.base64.ENCODED_VALS_BASE + '-_.';
+
+
+/**
+ * Whether this browser supports the atob and btoa functions. This extension
+ * started at Mozilla but is now implemented by many browsers. We use the
+ * ASSUME_* variables to avoid pulling in the full useragent detection library
+ * but still allowing the standard per-browser compilations.
+ *
+ * @type {boolean}
+ */
+goog.crypt.base64.HAS_NATIVE_SUPPORT = goog.userAgent.GECKO ||
+                                       goog.userAgent.WEBKIT ||
+                                       goog.userAgent.OPERA ||
+                                       typeof(goog.global.atob) == 'function';
+
+
+/**
+ * Base64-encode an array of bytes.
+ *
+ * @param {Array.<number>|Uint8Array} input An array of bytes (numbers with
+ *     value in [0, 255]) to encode.
+ * @param {boolean=} opt_webSafe Boolean indicating we should use the
+ *     alternative alphabet.
+ * @return {string} The base64 encoded string.
+ */
+goog.crypt.base64.encodeByteArray = function(input, opt_webSafe) {
+  if (!goog.isArrayLike(input)) {
+    throw Error('encodeByteArray takes an array as a parameter');
+  }
+
+  goog.crypt.base64.init_();
+
+  var byteToCharMap = opt_webSafe ?
+                      goog.crypt.base64.byteToCharMapWebSafe_ :
+                      goog.crypt.base64.byteToCharMap_;
+
+  var output = [];
+
+  for (var i = 0; i < input.length; i += 3) {
+    var byte1 = input[i];
+    var haveByte2 = i + 1 < input.length;
+    var byte2 = haveByte2 ? input[i + 1] : 0;
+    var haveByte3 = i + 2 < input.length;
+    var byte3 = haveByte3 ? input[i + 2] : 0;
+
+    var outByte1 = byte1 >> 2;
+    var outByte2 = ((byte1 & 0x03) << 4) | (byte2 >> 4);
+    var outByte3 = ((byte2 & 0x0F) << 2) | (byte3 >> 6);
+    var outByte4 = byte3 & 0x3F;
+
+    if (!haveByte3) {
+      outByte4 = 64;
+
+      if (!haveByte2) {
+        outByte3 = 64;
+      }
+    }
+
+    output.push(byteToCharMap[outByte1],
+                byteToCharMap[outByte2],
+                byteToCharMap[outByte3],
+                byteToCharMap[outByte4]);
+  }
+
+  return output.join('');
+};
+
+
+/**
+ * Base64-encode a string.
+ *
+ * @param {string} input A string to encode.
+ * @param {boolean=} opt_webSafe If true, we should use the
+ *     alternative alphabet.
+ * @return {string} The base64 encoded string.
+ */
+goog.crypt.base64.encodeString = function(input, opt_webSafe) {
+  // Shortcut for Mozilla browsers that implement
+  // a native base64 encoder in the form of "btoa/atob"
+  if (goog.crypt.base64.HAS_NATIVE_SUPPORT && !opt_webSafe) {
+    return goog.global.btoa(input);
+  }
+  return goog.crypt.base64.encodeByteArray(
+      goog.crypt.stringToByteArray(input), opt_webSafe);
+};
+
+
+/**
+ * Base64-decode a string.
+ *
+ * @param {string} input to decode.
+ * @param {boolean=} opt_webSafe True if we should use the
+ *     alternative alphabet.
+ * @return {string} string representing the decoded value.
+ */
+goog.crypt.base64.decodeString = function(input, opt_webSafe) {
+  // Shortcut for Mozilla browsers that implement
+  // a native base64 encoder in the form of "btoa/atob"
+  if (goog.crypt.base64.HAS_NATIVE_SUPPORT && !opt_webSafe) {
+    return goog.global.atob(input);
+  }
+  return goog.crypt.byteArrayToString(
+      goog.crypt.base64.decodeStringToByteArray(input, opt_webSafe));
+};
+
+
+/**
+ * Base64-decode a string.
+ *
+ * @param {string} input to decode (length not required to be a multiple of 4).
+ * @param {boolean=} opt_webSafe True if we should use the
+ *     alternative alphabet.
+ * @return {!Array} bytes representing the decoded value.
+ */
+goog.crypt.base64.decodeStringToByteArray = function(input, opt_webSafe) {
+  goog.crypt.base64.init_();
+
+  var charToByteMap = opt_webSafe ?
+                      goog.crypt.base64.charToByteMapWebSafe_ :
+                      goog.crypt.base64.charToByteMap_;
+
+  var output = [];
+
+  for (var i = 0; i < input.length; ) {
+    var byte1 = charToByteMap[input.charAt(i++)];
+
+    var haveByte2 = i < input.length;
+    var byte2 = haveByte2 ? charToByteMap[input.charAt(i)] : 0;
+    ++i;
+
+    var haveByte3 = i < input.length;
+    var byte3 = haveByte3 ? charToByteMap[input.charAt(i)] : 0;
+    ++i;
+
+    var haveByte4 = i < input.length;
+    var byte4 = haveByte4 ? charToByteMap[input.charAt(i)] : 0;
+    ++i;
+
+    if (byte1 == null || byte2 == null ||
+        byte3 == null || byte4 == null) {
+      throw Error();
+    }
+
+    var outByte1 = (byte1 << 2) | (byte2 >> 4);
+    output.push(outByte1);
+
+    if (byte3 != 64) {
+      var outByte2 = ((byte2 << 4) & 0xF0) | (byte3 >> 2);
+      output.push(outByte2);
+
+      if (byte4 != 64) {
+        var outByte3 = ((byte3 << 6) & 0xC0) | byte4;
+        output.push(outByte3);
+      }
+    }
+  }
+
+  return output;
+};
+
+
+/**
+ * Lazy static initialization function. Called before
+ * accessing any of the static map variables.
+ * @private
+ */
+goog.crypt.base64.init_ = function() {
+  if (!goog.crypt.base64.byteToCharMap_) {
+    goog.crypt.base64.byteToCharMap_ = {};
+    goog.crypt.base64.charToByteMap_ = {};
+    goog.crypt.base64.byteToCharMapWebSafe_ = {};
+    goog.crypt.base64.charToByteMapWebSafe_ = {};
+
+    // We want quick mappings back and forth, so we precompute two maps.
+    for (var i = 0; i < goog.crypt.base64.ENCODED_VALS.length; i++) {
+      goog.crypt.base64.byteToCharMap_[i] =
+          goog.crypt.base64.ENCODED_VALS.charAt(i);
+      goog.crypt.base64.charToByteMap_[goog.crypt.base64.byteToCharMap_[i]] = i;
+      goog.crypt.base64.byteToCharMapWebSafe_[i] =
+          goog.crypt.base64.ENCODED_VALS_WEBSAFE.charAt(i);
+      goog.crypt.base64.charToByteMapWebSafe_[
+          goog.crypt.base64.byteToCharMapWebSafe_[i]] = i;
+    }
+  }
+};
 // -*- mode: Javascript; js-indent-level: 4; -*-
 // Copyright 2013 Massachusetts Institute of Technology. All rights reserved.
 
@@ -78095,6 +78594,7 @@ goog.require('goog.events.EventType');
 goog.require('goog.crypt.Hash');
 goog.require('goog.crypt.Sha1');
 goog.require('goog.crypt.Hmac');
+goog.require('goog.crypt.base64');
 
 // Repl State
 // Repl "state" definitions
@@ -78195,6 +78695,9 @@ Blockly.ReplMgr.buildYail = function() {
         if (!block.category || (block.hasError && !block.replError)) { // Don't send blocks with
             continue;           // Errors, unless they were errors signaled by the repl
         }
+        if (block.disabled) {   // Don't send disabled blocks
+            continue;
+        }
         if (block.blockType != "event" &&
             block.type != "global_declaration" &&
             block.type != "procedures_defnoreturn" &&
@@ -78245,7 +78748,9 @@ Blockly.ReplMgr.pollYail = function() {
         } catch (err) {
         }
     }
-    this.RefreshAssets(this.formName);
+    if (window.parent.ReplState.state == this.rsState.CONNECTED) {
+        this.RefreshAssets(this.formName);
+    }
 };
 
 Blockly.ReplMgr.resetYail = function(code) {
@@ -78342,7 +78847,7 @@ Blockly.ReplMgr.putYail = (function() {
                         if (work.failure) {
                             work.failure("Network Connection Error");
                         }
-                        var dialog = new Blockly.ReplMgr.Dialog("Network Error", "Network Error Communicating with Companion.<br />Try restarting the Companion and reconnecting", "OK", 0,
+                        var dialog = new Blockly.ReplMgr.Dialog("Network Error", "Network Error Communicating with Companion.<br />Try restarting the Companion and reconnecting", "OK", null, 0,
                             function() {
                                 dialog.hide();
                                 context.hardreset(context.formName);
@@ -78366,14 +78871,13 @@ Blockly.ReplMgr.putYail = (function() {
                 if (this.readyState == 4 && this.status == 200) {
                     rs.didversioncheck = true;
                     if (this.response[0] != "{") {
-                        engine.checkversionupgrade(true, ""); // Old Companion
+                        engine.checkversionupgrade(true, "", true); // Old Companion
                         engine.resetcompanion();
                         return;
                     } else {
                         var json = goog.json.parse(this.response);
                         if (!Blockly.ReplMgr.acceptableVersion(json.version)) {
-                            engine.checkversionupgrade(true, json.installer);
-                            engine.resetcompanion();
+                            engine.checkversionupgrade(true, json.installer, false);
                             return;
                         }
                     }
@@ -78381,7 +78885,7 @@ Blockly.ReplMgr.putYail = (function() {
                     return;
                 }
                 if (this.readyState == 4) { // Old Companion, doesn't do CORS so we fail to talk to it
-                    var dialog = new Blockly.ReplMgr.Dialog("Network Error", "Network Error Communicating with Companion.<br />Try restarting the Companion and reconnecting", "OK", 0, function() {
+                    var dialog = new Blockly.ReplMgr.Dialog("Network Error", "Network Error Communicating with Companion.<br />Try restarting the Companion and reconnecting", "OK", null, 0, function() {
                         dialog.hide();
                     });
                     engine.resetcompanion();
@@ -78428,20 +78932,38 @@ Blockly.ReplMgr.putYail = (function() {
             rs.didversioncheck = false;
             window.parent.BlocklyPanel_indicateDisconnect();
         },
-        "checkversionupgrade" : function(fatal, installer) {
+        "checkversionupgrade" : function(fatal, installer, force) {
             var dialog;
+            var cancelButton;
+            if (force) {
+                cancelButton = null; // Don't permit deferring the upgrade
+            } else {
+                cancelButton = "Not Now";
+            }
             if (installer === undefined)
                 installer = "com.android.vending"; // Temp kludge: Treat old Companions as un-updateable (as they are)
             if (installer != "com.android.vending" && window.parent.COMPANION_UPDATE_URL) {
                 var emulator = (rs.replcode == 'emulator'); // Kludgey way to tell
-                dialog = new Blockly.ReplMgr.Dialog("Companion Version Check", "We need to update " + (emulator?"the Companion App installed in your emulator":"your AI2 Companion App") + " when you click \"OK\" below we will attempt this process. You will be required to approve the update and afterwards you will need to reconnect.", "OK", 0, function() {
+
+
+
+
+                dialog = new Blockly.ReplMgr.Dialog("Companion Version Check",
+                                                    'Your Companion App is out of date. Click "OK" to start the update. ' +
+"Watch your " + (emulator?"emulator's":"device's") + ' screen because you will be asked to approve the update.', "OK", cancelButton, 0, function(response) {
                     dialog.hide();
-                    context.triggerUpdate();
+                    if (response != "Not Now") {
+                        context.triggerUpdate();
+                    } else {
+                        engine.pollphone();
+                    }
                 });
             } else if (fatal) {
-                dialog = new Blockly.ReplMgr.Dialog("Companion Version Check", "The Companion you are using is not compatible with this version of AI2.<br/><br/>This Version of App Inventor wants Companion version" + window.parent.PREFERRED_COMPANION, "OK", 0, function() { dialog.hide();});
+                dialog = new Blockly.ReplMgr.Dialog("Companion Version Check", "The Companion you are using is out of date.<br/><br/>This Version of App Inventor should be used with Companion version" + window.parent.PREFERRED_COMPANION, "OK", null, 0, function() { dialog.hide();});
+                engine.resetcompanion();
             } else {
-                dialog = new Blockly.ReplMgr.Dialog("Companion Version Check", "You are using an out-of-date Companion, you should consider updating to the latest version.", "Dismiss", 1, function() { dialog.hide();});
+                dialog = new Blockly.ReplMgr.Dialog("Companion Version Check", "You are using an out-of-date Companion. You need not update the Companion immediately but should consider updating soon.", "Dismiss", null, 1, function() { dialog.hide();});
+                engine.resetcompanion();
             }
         }
     };
@@ -78449,15 +78971,96 @@ Blockly.ReplMgr.putYail = (function() {
     return engine.putYail;
 })();
 
+// This function is called when we need to update the Companion, we have
+// an update-able Companion and we have a path to update it from. Otherwise
+// we are never called and the user is given a message that their Companion
+// is out of date.
 Blockly.ReplMgr.triggerUpdate = function() {
     var rs = window.parent.ReplState;
+    var fetchconn = goog.net.XmlHttp();
     var encoder = new goog.Uri.QueryData();
-    encoder.add('url', window.parent.COMPANION_UPDATE_URL);
-    encoder.add('mac', Blockly.ReplMgr.hmac(window.parent.COMPANION_UPDATE_URL));
+    var context = this;
+
+    // Setup Dialog management code
+
+    var dialog = null;
+    var okbuttonshowing = false;
+    var showdialog = function(OkButton, message) {
+        if (dialog) {
+            if (!!OkButton != okbuttonshowing) { // The !! construct turns OkButton into a boolean
+                dialog.hide();
+                dialog = null;
+            }
+        }
+        if (dialog) {
+            dialog.setContent(message);
+        } else {
+            if (OkButton) {
+                dialog = new Blockly.ReplMgr.Dialog("Software Update", message, OkButton, null, 0,
+                                                    function() { dialog.hide();});
+                okbuttonshowing = true;
+            } else {
+                dialog = new Blockly.ReplMgr.Dialog("Software Update", message, null, null, 0, undefined);
+                dialog.display();
+                okbuttonshowing = false;
+            }
+        }
+    };
+    var hidedialog = function() {
+        if (dialog) {
+            dialog.hide();
+        }
+    };
+
+    // End of Dialog management code
+
+    var reset = function() {
+        // Reset companion state
+        rs.state = Blockly.ReplMgr.rsState.IDLE;
+        rs.connection = null;
+        rs.didversioncheck = false;
+        context.resetYail();
+        top.BlocklyPanel_indicateDisconnect();
+        // End reset companion state
+    };
+
+    var fail = function(message) {
+        showdialog("Ok", message);
+        reset();
+    };
+
+    encoder.add('package', 'update.apk');
     var qs = encoder.toString();
-    var conn = goog.net.XmlHttp();
-    conn.open("POST", rs.baseurl + '_update', true);
-    conn.send(qs);
+    fetchconn.open("GET", top.COMPANION_UPDATE_URL, true);
+    fetchconn.onreadystatechange = function() {
+        if (this.readyState == 4 && this.status == 200) {
+            try {
+                showdialog("Got It", 'The update is now being installed on your device. Watch your device (or emulator) screen and approve the software installation when prompted.<br /><br />IMPORTANT: When the update finishes, choose "DONE" (don\'t click "open"). Then go to App Inventor in your web browser, click the "Connect" menu and choose "Reset Connection".');
+                Blockly.ReplMgr.putAsset("update.apk", goog.crypt.base64.decodeStringToByteArray(this.response),
+                                         function() {
+                                             // Trigger Update Here
+                                             console.log("Update: Downloaded");
+                                             var conn = goog.net.XmlHttp();
+                                             conn.open("POST", rs.baseurl + "_package", true);
+                                             conn.onreadystatechange = function() {
+                                                 if (this.readyState == 4 && this.status == 200) {
+                                                     console.log("Update: _package success");
+                                                 }
+                                             };
+                                             conn.send(qs);
+                                         },
+                                         function() {
+                                             fail("Unable to send update to device/emulator");
+                                         }, true);
+            } catch (err) {     // Most likely a decoding error from goog.crypt.base64...
+                fail("Unable to load update from App Inventor server");
+            }
+        } else if (this.readyState == 4) {
+            fail("Unable to load update from App Inventor server (server not responding)");
+        }
+    };
+    showdialog(false, "We are now downloading update from the App Inventor Server, please standby");
+    fetchconn.send();
 };
 
 Blockly.ReplMgr.acceptableVersion = function(version) {
@@ -78545,8 +79148,11 @@ Blockly.ReplMgr.setDoitResult = function(block, value) {
 
 Blockly.ReplMgr.startAdbDevice = function(rs, usb) {
     var first = true;
-    var blockly = this;
+    var context = this;
     var counter = 0;            // Used to for counting down
+    var ubercounter = 0;        // Used to keep track of how many times we
+                                // have attempted to start the emulator
+    var ubergiveup = 8;         // How many attempts to start the emulator
     var pc = 0;                 // Use to keep track of state
     var dialog = null;          // We have one dialog for the block
                                 // so we don't create multiple ones
@@ -78560,7 +79166,7 @@ Blockly.ReplMgr.startAdbDevice = function(rs, usb) {
     } else {
         message = 'Starting the Android Emulator';
     }
-    progdialog = new Blockly.ReplMgr.Dialog("Connecting...", message, "Cancel", 0, function() {
+    progdialog = new Blockly.ReplMgr.Dialog("Connecting...", message, "Cancel", null, 0, function() {
         progdialog.hide();
         clearInterval(interval);
         window.parent.ReplState.state = Blockly.ReplMgr.rsState.IDLE;
@@ -78570,11 +79176,37 @@ Blockly.ReplMgr.startAdbDevice = function(rs, usb) {
             dialog = null;
         }
     });
+    var timeout = function() {
+        clearInterval(interval);    // Stop polling
+        var giveupButton = "Give Up";
+        var keepgoingButton = "Keep Trying";
+        dialog = new Blockly.ReplMgr.Dialog("Connection Failure", "We could not start the MIT AI Companion within the Emulator", giveupButton, keepgoingButton, 0, function(response) {
+            dialog.hide();
+            dialog = null;
+            if (response == giveupButton) {
+                if (progdialog) {
+                    progdialog.hide();
+                    progdialog = null;
+                }
+                top.ReplState.state = Blockly.ReplMgr.rsState.IDLE;
+                top.ReplState.connection = null;
+                top.BlocklyPanel_indicateDisconnect();
+                context.resetYail();
+                context.hardreset(context.formName);
+            } else {
+                ubercounter = 0;
+                counter = 10;
+                pc = 2;
+                interval = setInterval(mainloop, 1000); // Need to restart mainloop(polling)
+            }
+        });
+    };
+
     // 0 == starting emulator
     // 1 == Counting down after emulator started
     // 2 == Counting down after repl start requested
     // 3 == Done (nothing to do), interval should be cleared
-    interval = setInterval(function() {
+    var mainloop = function() {
         var xhr;
         switch(pc) {
         case 0:
@@ -78602,7 +79234,7 @@ Blockly.ReplMgr.startAdbDevice = function(rs, usb) {
                             xhr.send();
                             first = false;
                         } else if (first) { // USB
-                            udialog = new Blockly.ReplMgr.Dialog("Plugged In?", "AI2 does not see your device, make sure the cable is plugged in and drivers are correct.", "OK", 0, function() { udialog.hide(); udialog = null;});
+                            udialog = new Blockly.ReplMgr.Dialog("Plugged In?", "AI2 does not see your device, make sure the cable is plugged in and drivers are correct.", "OK", null, 0, function() { udialog.hide(); udialog = null;});
                             first = false;
                         }
                     }
@@ -78615,7 +79247,7 @@ Blockly.ReplMgr.startAdbDevice = function(rs, usb) {
                     }
                     if (!dialog) {
                         window.parent.BlocklyPanel_indicateDisconnect();
-                        dialog = new Blockly.ReplMgr.Dialog("Helper?", 'The aiStarter helper does not appear to be running<br /><a href="http://appinventor.mit.edu" target="_blank">Need Help?</a>', "OK", 0, function() {
+                        dialog = new Blockly.ReplMgr.Dialog("Helper?", 'The aiStarter helper does not appear to be running<br /><a href="http://appinventor.mit.edu" target="_blank">Need Help?</a>', "OK", null, 0, function() {
                             dialog.hide();
                             dialog = null;
                             if (progdialog) {
@@ -78648,7 +79280,8 @@ Blockly.ReplMgr.startAdbDevice = function(rs, usb) {
                     progdialog.setContent("Starting the Companion App in the emulator.");
                 }
                 pc = 2;
-                counter = 6;
+                counter = 10;
+                ubercounter = 0;
                 xhr = goog.net.XmlHttp();
                 xhr.open("GET", "http://localhost:8004/replstart/" + device, true); // Don't look at response
                 xhr.send();
@@ -78657,10 +79290,11 @@ Blockly.ReplMgr.startAdbDevice = function(rs, usb) {
         case 2:
             counter -= 1;
             if (counter > 0) {
-                progdialog.setContent("Companion started, waiting " + counter + " seconds to ensure all is running.");
+                progdialog.setContent("Companion starting, waiting " + counter + " seconds to ensure all is running.");
             } else {
                 progdialog.setContent("Verifying that the Companion Started....");
                 xhr = goog.net.XmlHttp();
+                xhr.timeout = 4000; // 4 seconds
                 xhr.open("GET", rs.versionurl, true);
                 xhr.onreadystatechange = function() {
                     if (this.readyState == 4) {
@@ -78668,9 +79302,17 @@ Blockly.ReplMgr.startAdbDevice = function(rs, usb) {
                             pc = 4; // We got a response!
                             return;
                         } else {
-                            // We didn't work, add some time and go back to state 2
-                            counter = 5; // Wait 5 more seconds
-                            pc = 2;
+                            ubercounter += 1;
+                            if (ubercounter > ubergiveup) { // It's never going to work!
+                                timeout();
+                            } else {
+                                // We didn't work yet, kick it again and add some time and go back to state 2
+                                xhr = goog.net.XmlHttp();
+                                xhr.open("GET", "http://localhost:8004/replstart/" + device, true); // Don't look at response
+                                xhr.send();
+                                counter = 10; // Wait 10 more seconds
+                                pc = 2;
+                            }
                         }
                     }
                 };
@@ -78683,11 +79325,12 @@ Blockly.ReplMgr.startAdbDevice = function(rs, usb) {
                                 // we are waiting for the version check (noop) to finish
         case 4:
             progdialog.hide();
-            rs.state = blockly.rsState.CONNECTED; // Indicate that we are good to go!
+            rs.state = context.rsState.CONNECTED; // Indicate that we are good to go!
             clearInterval(interval);
-            window.parent.BlocklyPanel_blocklyWorkspaceChanged(blockly.formName);
+            window.parent.BlocklyPanel_blocklyWorkspaceChanged(context.formName);
         }
-    }, 1000);                   // We poll once per second
+    };
+    interval = setInterval(mainloop, 1000); // Once per second
 };
 
 // Convert non-ASCII Characters to kawa unicode escape
@@ -78740,7 +79383,7 @@ Blockly.ReplMgr.startRepl = function(already, emulator, usb) {
         rs.rendezvouscode = this.sha1(rs.replcode);
         rs.seq_count = 1;          // used for the creating the hmac mac
         rs.count = 0;
-        rs.dialog = new Blockly.ReplMgr.Dialog("Connect to Companion", this.makeDialogMessage(rs.replcode), "Cancel", 1, function() {
+        rs.dialog = new Blockly.ReplMgr.Dialog("Connect to Companion", this.makeDialogMessage(rs.replcode), "Cancel", null, 1, function() {
             rs.dialog.hide();
             rs.state = Blockly.ReplMgr.rsState.IDLE; // We're punting
             rs.connection = null;
@@ -78810,7 +79453,7 @@ Blockly.ReplMgr.rendPoll = function() {
         if (window.parent.ReplState.count > 40) {
             window.parent.ReplState.state = this.rsState.IDLE;
             window.parent.ReplState.dialog.hide(); // Punt the dialog
-            dialog = new Blockly.ReplMgr.Dialog('Connection Failure', 'Failed to Connect to the MIT AI2 Companion, try again.', "OK", 0, function() {
+            dialog = new Blockly.ReplMgr.Dialog('Connection Failure', 'Failed to Connect to the MIT AI2 Companion, try again.', "OK", null, 0, function() {
                 dialog.hide();
             });
             window.parent.ReplState.url = null;
@@ -78829,11 +79472,12 @@ Blockly.ReplMgr.rendPoll = function() {
 // argument being passed to the callback. If in the future we need to pass an arugment
 // we can worry about adding that functionality.
 
-Blockly.ReplMgr.Dialog = function(title, content, buttonName, size, callback) {
+Blockly.ReplMgr.Dialog = function(title, content, buttonName, cancelButtonName, size, callback) {
     this.title = title;
     this.content = content;
     this.size = size;
     this.buttonName = buttonName;
+    this.cancelButtonName = cancelButtonName;
     this.callback = callback;
     if (this.buttonName) {
         this.display();
@@ -78842,17 +79486,17 @@ Blockly.ReplMgr.Dialog = function(title, content, buttonName, size, callback) {
 
 Blockly.ReplMgr.Dialog.prototype = {
     'display' : function() {
-        this._dialog = window.parent.BlocklyPanel_createDialog(this.title, this.content, this.buttonName, this.size, this.callback);
+        this._dialog = window.parent.BlocklyPanel_createDialog(this.title, this.content, this.buttonName, this.cancelButtonName, this.size, this.callback);
     },
     'hide' : function() {
         if (this._dialog) {
-            window.parent.BlocklyPanel_hideDialog(this._dialog);
+            top.BlocklyPanel_hideDialog(this._dialog);
             this._dialog = null;
         }
     },
     'setContent' : function(message) {
         if (this._dialog) {
-            window.parent.BlocklyPanel_setDialogContent(this._dialog, message);
+            top.BlocklyPanel_setDialogContent(this._dialog, message);
         }
     }
 };
@@ -78862,7 +79506,7 @@ Blockly.ReplMgr.makeDialogMessage = function(code) {
     qr.addData(code);
     qr.make();
     var img = qr.createImgTag(6);
-    retval = '<table><tr><td>' + img + '</td><td>Your code is:<br /><br /><b>' + code + '</b></td></tr></table>';
+    retval = '<table><tr><td>' + img + '</td><td><font size="+1">Your code is:<br /><br /><font size="+1"><b>' + code + '</b></font></font></td></tr></table>';
     return retval;
 };
 
@@ -78891,10 +79535,10 @@ Blockly.ReplMgr.bytes_to_hexstring = function(input) {
     return z.join("");
 };
 
-Blockly.ReplMgr.putAsset = function(filename, blob) {
+Blockly.ReplMgr.putAsset = function(filename, blob, success, fail, force) {
     if (window.parent.ReplState === undefined)
         return false;
-    if (window.parent.ReplState.state != this.rsState.CONNECTED)
+    if (!force && (window.parent.ReplState.state != this.rsState.CONNECTED))
         return false;           // We didn't really do anything
     var conn = goog.net.XmlHttp();
     var rs = window.parent.ReplState;
@@ -78902,6 +79546,18 @@ Blockly.ReplMgr.putAsset = function(filename, blob) {
     var z = filename.split('/'); // Remove any directory components
     encoder.add('filename', z[z.length-1]);
     conn.open('PUT', rs.baseurl + '?' + encoder.toString(), true);
+    conn.onreadystatechange = function() {
+        if (this.readyState == 4 && this.status == 200) {
+            if (success) {      // process callbacks
+                success();
+            }
+        } else if (this.readyState == 4) {
+            if (fail) {
+                fail();
+            }
+        }
+    };
+
     var arraybuf = new ArrayBuffer(blob.length);
     var arrayview = new Uint8Array(arraybuf);
     for (var i = 0; i < blob.length; i++) {
@@ -78911,13 +79567,38 @@ Blockly.ReplMgr.putAsset = function(filename, blob) {
     return true;
 };
 
-Blockly.ReplMgr.hardreset = function(formName) {
+Blockly.ReplMgr.hardreset = function(formName, callback) {
     window.parent.AssetManager_reset(formName); // Reset the notion of what assets
                                                 // are loaded.
     var xhr = goog.net.XmlHttp();
     xhr.open("GET", "http://localhost:8004/reset/", true);
-    xhr.onreadystatechange = function() {}; // Ignore errors
+    xhr.onreadystatechange = function() {
+        if (this.readyState == 4) {
+            if (callback) {     // Always call the callback
+                callback(this.status);
+            }
+        }
+    };
     xhr.send();
+};
+
+// ehardreset -- Reset connections and then tell aiStarter to
+// run the reset-emulator script. This will reset things to their
+// "factory" defaults.
+
+Blockly.ReplMgr.ehardreset = function(formName) {
+    var context = this;
+    var dialog = new Blockly.ReplMgr.Dialog("Do You Really?", 'This will attempt to reset your Emulator to its "factory" state. If you had previously updated the Companion installed in the Emulator, you will likely have to do this again.', "OK", "Cancel", 0, function(response) {
+        dialog.hide();
+        if (response == "OK") {
+            context.hardreset(formName, function() {
+                var xhr = goog.net.XmlHttp();
+                xhr.open("GET", "http://localhost:8004/emulatorreset/", true);
+                xhr.onreadystatchange = function() {}; // Ignore errors
+                xhr.send();
+            });
+        }
+    });
 };
 
 // Make a QRCode in an image tag. This is currently used by the

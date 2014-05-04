@@ -21,6 +21,7 @@ ImagePicker
 ImageSprite
 Label
 ListPicker
+ListView
 LocationSensor
 NearField
 Notifier
@@ -38,10 +39,12 @@ PhoneCall
 PhoneNumberPicker
 PhoneStatus
 Player
+Sharing
 Slider
 Sound
 SoundRecorder
 SpeechRecognizer
+Spinner
 TableArrangement
 TextBox
 TextToSpeech
