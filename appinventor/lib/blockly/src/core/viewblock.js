@@ -343,17 +343,6 @@ Blockly.ViewBlock.createAutoComplete_ = function(inputText){
 
        if (matches.length > 0) { 
 
-         //helper function to check if contains
-         function contains(a, obj) {
-          var i = a.length;
-          while (i--) {
-           if (a[i] === obj) {
-            return true;
-           }
-          }
-          return false;
-         }
-
          var tBlocks = Blockly.mainWorkspace.getTopBlocks(false);
          var topMatches = [];
          for (var t = 0; t < matches.length; t++) {
@@ -361,7 +350,7 @@ Blockly.ViewBlock.createAutoComplete_ = function(inputText){
          }
          for (var j = 0; j < tBlocks.length; j++) {
           //if it's not selected block and it's the top block, collapse all others
-          if (!contains(topMatches, tBlocks[j])) {
+          if (!goog.array.contains(topMatches, tBlocks[j])) {
               tBlocks[j].setCollapsed(true);
           } else {
             tBlocks[j].setCollapsed(false);
@@ -374,8 +363,8 @@ Blockly.ViewBlock.createAutoComplete_ = function(inputText){
 
          //function to sort blocks by how well it matches
          function sortByMatch(a, b) {
-           if (contains(topMatches, a)) return  +1;
-           else if (contains(topMatches, b)) return -1;
+           if (goog.array.contains(topMatches, a)) return  -1;
+           else if (goog.array.contains(topMatches, b)) return +1;
            else return 0;
          }
 
@@ -387,6 +376,7 @@ Blockly.ViewBlock.createAutoComplete_ = function(inputText){
           if (Blockly.workspace_arranged_type === Blockly.BLKS_CATEGORY){
             topblocks.sort(sortByMatch);
           }
+          topblocks.sort(sortByMatch);
           var metrics = Blockly.mainWorkspace.getMetrics();
           var viewLeft = metrics.viewLeft + 5;
           var viewTop = metrics.viewTop + 5;
