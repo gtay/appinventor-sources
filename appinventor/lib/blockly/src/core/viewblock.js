@@ -12,7 +12,6 @@ goog.provide('Blockly.ViewBlock');
 goog.require('goog.events');
 goog.require('goog.events.KeyCodes');
 goog.require('goog.events.KeyHandler');
-goog.require('goog.events.ActionHandler'); 
 goog.require('goog.ui.ac');
 goog.require('goog.style');
 
@@ -28,23 +27,19 @@ goog.require('goog.ui.ac.Renderer');
        frame: 'ai_frame',
        viewBlockDiv: 'ai_view_block',
        inputText: 'ac_view_input_text'
-       previous: 'ac_button_previous', 
-       next: 'ac_button_next',
-       matchesText: 'ac_matches_text'
      }
  * stating the ids of the attributes to be used in the html enclosing page
  * create a new block
  */
+
+ 
 Blockly.ViewBlock = function( htmlConfig ){
+  var frame = htmlConfig['frame'];
   Blockly.ViewBlock.viewBlockDiv_ = htmlConfig['viewBlockDiv'];
   Blockly.ViewBlock.inputText_ = htmlConfig['inputText'];
-  Blockly.ViewBlock.buttonNext_ = htmlConfig['next']; 
-  Blockly.ViewBlock.buttonPrevious_ = htmlConfig['previous'];
-  Blockly.ViewBlock.matchesText_ = htmlConfig['matchesText']; 
 
+  //Blockly.ViewBlock.docKh_ = new goog.events.KeyHandler(goog.dom.getElement(frame));
   Blockly.ViewBlock.inputKh_ = new goog.events.KeyHandler(goog.dom.getElement(Blockly.ViewBlock.inputText_));
-  Blockly.ViewBlock.nextAh_ = new goog.events.ActionHandler(goog.dom.getElement(Blockly.ViewBlock.buttonNext_)); 
-  Blockly.ViewBlock.prevAh_ = new goog.events.ActionHandler(goog.dom.getElement(Blockly.ViewBlock.buttonPrevious_)); 
 
   Blockly.ViewBlock.handleKey = function(e){
     if (e.altKey || e.ctrlKey || e.metaKey || e.keycode === 9) return; // 9 is tab
@@ -72,10 +67,11 @@ Blockly.ViewBlock = function( htmlConfig ){
     if (e.target.id === '') return;
     if (goog.style.isElementShown(goog.dom.getElement(Blockly.ViewBlock.viewBlockDiv_))) {
       // Enter in the panel makes it select an option
-      // if (e.keyCode === 13) Blockly.ViewBlock.hide();
+      if (e.keyCode === 13) Blockly.ViewBlock.hide();
       //SELECT do select after enter
     }
   };
+  // goog.events.listen(Blockly.ViewBlock.docKh_, 'key', Blockly.ViewBlock.handleKey);
   // Create the auto-complete panel
   Blockly.ViewBlock.createAutoComplete_(Blockly.ViewBlock.inputText_);
 };
@@ -93,37 +89,13 @@ Blockly.ViewBlock.viewBlockDiv_ = null;
  */
 Blockly.ViewBlock.inputText_ = "Filter Blocks";
 
-/** 
- * text to display the number of matches on filter bar
- * @private
- */ 
-Blockly.ViewBlock.matchesText_ = ''; 
-
 /**
- * button contained in filter panel, used to navigate through matches 
+ * Document key handler applied to the frame area, and used to catch keyboard
+ * events. It is detached when the View Block panel is shown, and
+ * re-attached when the Panel is dismissed. DON'T NEED THIS
  * @private
  */
- Blockly.ViewBlock.buttonNext_ = null; 
-
- /**
- * button contained in filter panel, used to navigate through matches 
- * @private
- */
- Blockly.ViewBlock.buttonPrevious_ = null; 
-
-/**
- * Action handler applied to next button, used to navigate through multiple
- * matches.  
- * @private
- */
- Blockly.ViewBlock.nextAh_ = null; 
-
- /**
- * Action handler applied to previous button, used to navigate through multiple
- * matches.  
- * @private
- */
- Blockly.ViewBlock.prevAh_ = null; 
+//Blockly.ViewBlock.docKh_ = null;
 
 /**
  * Input key handler applied to the View Block Panel, and used to catch
@@ -162,21 +134,6 @@ Blockly.ViewBlock.VBOptions_ = {};
 Blockly.ViewBlock.VBOptionsNames_ = [];
 
 /**
- * This array contains the matches from autocomplete widget to be used 
- * to navigate through multiple matches to a filter query. 
- * @private
- */ 
-Blockly.ViewBlock.VBMatches_ = []; 
-
-/**
- * Keeps track of the current block in the VBMatches_ array that the user
- * is or will be viewing after filtering the workspace. Is modified in the 
- * handleNext and handlePrevious listener functions.
- * @private
- */ 
-Blockly.ViewBlock.VBMatchesIdx_ = 0; 
-
-/**
  * pointer to the automcomplete widget to be able to change its contents when
  * the Language tree is modified (additions, renaming, or deletions)
  * @private
@@ -192,58 +149,17 @@ Blockly.ViewBlock.ac_ = null;
 Blockly.ViewBlock.currentListener_ = null;
 
 /**
- * Listener function that allows the user to focus on the next element in the
- * VBMatches_ array created in createAutoComplete_. 
- */ 
-Blockly.ViewBlock.handleNext = function(e) { 
-  if (Blockly.ViewBlock.VBMatches_.length > 0) { 
-    if (Blockly.ViewBlock.VBMatchesIdx_ + 1 >= Blockly.ViewBlock.VBMatches_.length) { 
-      Blockly.ViewBlock.VBMatchesIdx_ = 0; 
-    } else { 
-      Blockly.ViewBlock.VBMatchesIdx_ += 1; 
-    }
-    var selectedBlock = Blockly.ViewBlock.VBMatches_[Blockly.ViewBlock.VBMatchesIdx_]; 
-    var coords = selectedBlock.getRelativeToSurfaceXY(); 
-    Blockly.mainWorkspace.scrollbar.set(coords.x, coords.y);
-  } else {
-    // console.log('No more matches for ' + blockName); 
-  }
-}; 
-
-/**
- * Listener function that allows the user to focus on the previous element in the
- * VBMatches_ array created in createAutoComplete_. 
- */ 
-Blockly.ViewBlock.handlePrevious = function(e) { 
-  if (Blockly.ViewBlock.VBMatches_.length > 0) { 
-    if (Blockly.ViewBlock.VBMatchesIdx_ - 1 < 0) { 
-      Blockly.ViewBlock.VBMatchesIdx_ = Blockly.ViewBlock.VBMatches_.length - 1; 
-    } else { 
-      Blockly.ViewBlock.VBMatchesIdx_ -= 1; 
-    }
-    var selectedBlock = Blockly.ViewBlock.VBMatches_[Blockly.ViewBlock.VBMatchesIdx_]; 
-    var coords = selectedBlock.getRelativeToSurfaceXY(); 
-    Blockly.mainWorkspace.scrollbar.set(coords.x, coords.y);
-  } else {
-    // console.log('No more matches for ' + blockName); 
-  }
-}; 
-
-/**
  * function to hide the autocomplete panel. Also used from hideChaff in
  * Blockly.js
  */
+// TODO: should we unarrange the workspace? 
 Blockly.ViewBlock.hide = function(){ //this should never be called
   if (Blockly.ViewBlock.viewBlockDiv_ == null)
     return;
   goog.style.showElement(goog.dom.getElement(Blockly.ViewBlock.viewBlockDiv_), false);
   goog.events.unlisten(Blockly.ViewBlock.inputKh_, 'key', Blockly.ViewBlock.handleKey);
-  goog.events.unlisten(Blockly.ViewBlock.prevAh_, goog.events.ActionHandler.EventType.ACTION, Blockly.ViewBlock.handlePrevious); 
-  goog.events.unlisten(Blockly.ViewBlock.nextAh_, goog.events.ActionHandler.EventType.ACTION, Blockly.ViewBlock.handleNext); 
-
-  Blockly.ViewBlock.VBMatches_ = []; 
+  //goog.events.listen(Blockly.ViewBlock.docKh_, 'key', Blockly.ViewBlock.handleKey);
   Blockly.ViewBlock.visible = false;
-  Blockly.ViewBlock.VBMatchesIdx_ = 0; 
 };
 
 /**
@@ -256,15 +172,11 @@ Blockly.ViewBlock.show = function(){
   goog.style.setStyle(panel, 'left', Blockly.latestClick.x);
   goog.style.showElement(panel, true);
   goog.dom.getElement(Blockly.ViewBlock.inputText_).focus();
-
   // If the input gets cleaned before adding the handler, all keys are read
   // correctly (at times it was missing the first char)
   goog.dom.getElement(Blockly.ViewBlock.inputText_).value = '';
-  goog.dom.getElement(Blockly.ViewBlock.matchesText_).innerHTML = ''; 
+  // goog.events.unlisten(Blockly.ViewBlock.docKh_, 'key', Blockly.ViewBlock.handleKey);
   goog.events.listen(Blockly.ViewBlock.inputKh_, 'key', Blockly.ViewBlock.handleKey);
-  goog.events.listen(Blockly.ViewBlock.prevAh_, goog.events.ActionHandler.EventType.ACTION, Blockly.ViewBlock.handlePrevious); 
-  goog.events.listen(Blockly.ViewBlock.nextAh_, goog.events.ActionHandler.EventType.ACTION, Blockly.ViewBlock.handleNext); 
-  
   Blockly.ViewBlock.visible = true;
 };
 
@@ -285,12 +197,15 @@ Blockly.ViewBlock.needsReload = {
  * @private
  */ 
 Blockly.ViewBlock.lazyLoadOfOptions_ = function () {
+  console.log('ViewBlock.LazyLoadOfOptions'); 
   // Optimisation to avoid reloading all components and built-in objects unless it is needed.
   // needsReload.components is setup when adding/renaming/removing a component in components.js
   if (this.needsReload.components){
     Blockly.ViewBlock.generateOptions();
     this.needsReload.components = null;
   }
+  //Blockly.ViewBlock.loadGlobalVariables_();
+  //Blockly.ViewBlock.loadProcedures_();
   this.reloadOptionsAfterChanges_();
 }; 
 
@@ -304,16 +219,20 @@ Blockly.ViewBlock.lazyLoadOfOptions_ = function () {
  * example of how to call this function.
  */ 
 Blockly.ViewBlock.generateOptions = function() {
+  console.log('ViewBlock.generateOptions'); 
+
   var buildListOfOptions = function() {
     var listOfOptions = {};
     var viewblockArray;
+    // get only top blocks to start with? 
     var blocks = Blockly.mainWorkspace.getAllBlocks();
 
-    // can we get names in a better way? 
+    // what are the values we need? 
     for (var i = 0; i < blocks.length; i++) {      
       block = blocks[i]; 
       var canonicName = ''; 
       var translatedName = ''; 
+      console.log(block); 
 
       if (block.category === 'Component' && block.setOrGet) {
         canonicName = block.type;
@@ -324,15 +243,22 @@ Blockly.ViewBlock.generateOptions = function() {
       } else if (block.category === 'Component' && block.methodName) { 
         canonicName = block.type; 
         translatedName = "call " + block.instanceName + '.' + block.methodName; 
+      
+      // this is still wrong!!! 
+      // something with varibles here too? how do i generalize this??? 
       } else if ((block.category === 'Text' || block.category === 'Variables') && block.inputList[0].titleRow[0].text_) { 
         canonicName = block.type; 
         translatedName = block.inputList[0].titleRow[0].text_.toLowerCase();
       } else if (block.inputList[block.inputList.length-1].titleRow[0].text_) {
         canonicName = block.type; 
         translatedName = block.inputList[block.inputList.length-1].titleRow[0].text_.toLowerCase(); // don't know if lowercase is necessary 
+      
       } else { 
          throw new Error('Unable to parse canonicName and translatedName');
       }
+
+      console.log(canonicName); 
+      console.log(translatedName); 
 
       if (canonicName !== '') { 
           listOfOptions[translatedName] = {
@@ -357,6 +283,7 @@ Blockly.ViewBlock.generateOptions = function() {
  * @private
  */
 Blockly.ViewBlock.reloadOptionsAfterChanges_ = function () {
+  console.log('ViewBlock.reloadOptionsAfterChanges_'); 
   Blockly.ViewBlock.VBOptionsNames_ = goog.object.getKeys(Blockly.ViewBlock.VBOptions_);
   goog.array.sort(Blockly.ViewBlock.VBOptionsNames_);
   Blockly.ViewBlock.ac_.matcher_.setRows(Blockly.ViewBlock.VBOptionsNames_);
@@ -367,6 +294,8 @@ Blockly.ViewBlock.reloadOptionsAfterChanges_ = function () {
  * @private
  */
 Blockly.ViewBlock.createAutoComplete_ = function(inputText){
+  console.log('ViewBlock.createAutoComplete_'); 
+
   Blockly.ViewBlock.VBOptionsNames_ = goog.object.getKeys( Blockly.ViewBlock.VBOptions_ );
   goog.array.sort(Blockly.ViewBlock.VBOptionsNames_);
   goog.events.unlistenByKey(Blockly.ViewBlock.currentListener_); //if there is a key, unlisten
@@ -386,45 +315,8 @@ Blockly.ViewBlock.createAutoComplete_ = function(inputText){
   Blockly.ViewBlock.currentListener_ = goog.events.listen(Blockly.ViewBlock.ac_,
       goog.ui.ac.AutoComplete.EventType.UPDATE,
     function() {
-      // is there a better way to do this? can imagine this getting slow with many blocks 
       var blockName = goog.dom.getElement(inputText).value;
       var blocks = Blockly.mainWorkspace.getAllBlocks();
-<<<<<<< HEAD
-      Blockly.ViewBlock.VBMatches_ = []; 
-      // var matches = []; 
-      for (var i = 0; i < blocks.length; i++) {      
-        block = blocks[i]; 
-        if (block.category === 'Component' && block.setOrGet) {
-          translatedName = block.setOrGet + ' ' + block.instanceName + '.' + block.propertyName; 
-        } else if (block.category === 'Component' && block.blockType === 'event') { 
-          translatedName = "when " + block.instanceName + '.' + block.eventName; 
-        } else if (block.category === 'Component' && block.methodName) { 
-          translatedName = "call " + block.instanceName + '.' + block.methodName; 
-        } else if ((block.category === 'Text' || block.category === 'Variables') && block.inputList[0].titleRow[0].text_) { 
-          translatedName = block.inputList[0].titleRow[0].text_.toLowerCase();
-        } else if (block.inputList[block.inputList.length-1].titleRow[0].text_) {
-          translatedName = block.inputList[block.inputList.length-1].titleRow[0].text_.toLowerCase(); // don't know if lowercase is necessary 
-        } else { 
-           throw new Error('Unable to parse translatedName');
-        }
-
-        // populate list of matches 
-        if (blockName === translatedName) { 
-          Blockly.ViewBlock.VBMatches_.push(block); 
-          // console.log('Match made for: ' + blockName); 
-        }
-      }
-      // focus the screen on the first match
-      // do we want to select the block and highlight it? 
-      if (Blockly.ViewBlock.VBMatches_.length > 0) { 
-        goog.dom.getElement(Blockly.ViewBlock.matchesText_).innerHTML = Blockly.ViewBlock.VBMatches_.length.toString() + ' match(es) found.'; 
-        var selectedBlock = Blockly.ViewBlock.VBMatches_[Blockly.ViewBlock.VBMatchesIdx_]; 
-        var coords = selectedBlock.getRelativeToSurfaceXY(); 
-        Blockly.mainWorkspace.scrollbar.set(coords.x, coords.y);
-      } else {
-        // console.log('No matches found for ' + blockName); 
-      }
-=======
       var matches = [];
       for (var i = 0; i < blocks.length; i++) {
         block = blocks[i];
@@ -521,14 +413,17 @@ Blockly.ViewBlock.createAutoComplete_ = function(inputText){
          console.log('No matches found for ' + blockName); 
       }
       
->>>>>>> expands matched/collapses unmatched, and then rearranges workspace
     }
   );
 };
 
+
+
+
 //--------------------------------------
 // A custom matcher for the auto-complete widget that can handle numbers as well as the default
 // functionality of goog.ui.ac.ArrayMatcher
+
 goog.provide('Blockly.ViewBlock.ac.AIArrayMatcher');
 
 goog.require('goog.iter');
