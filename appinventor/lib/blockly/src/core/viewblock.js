@@ -205,6 +205,7 @@ Blockly.ViewBlock.handleNext = function(e) {
     var selectedBlock = Blockly.ViewBlock.VBMatches_[Blockly.ViewBlock.VBMatchesIdx_]; 
     var coords = selectedBlock.getRelativeToSurfaceXY(); 
     Blockly.mainWorkspace.scrollbar.set(coords.x, coords.y);
+    selectedBlock.select(); 
   } else {
     // console.log('No more matches for ' + blockName); 
   }
@@ -224,6 +225,7 @@ Blockly.ViewBlock.handlePrevious = function(e) {
     var selectedBlock = Blockly.ViewBlock.VBMatches_[Blockly.ViewBlock.VBMatchesIdx_]; 
     var coords = selectedBlock.getRelativeToSurfaceXY(); 
     Blockly.mainWorkspace.scrollbar.set(coords.x, coords.y);
+    selectedBlock.select(); 
   } else {
     // console.log('No more matches for ' + blockName); 
   }
@@ -241,8 +243,8 @@ Blockly.ViewBlock.hide = function(){ //this should never be called
   goog.events.unlisten(Blockly.ViewBlock.prevAh_, goog.events.ActionHandler.EventType.ACTION, Blockly.ViewBlock.handlePrevious); 
   goog.events.unlisten(Blockly.ViewBlock.nextAh_, goog.events.ActionHandler.EventType.ACTION, Blockly.ViewBlock.handleNext); 
 
-  Blockly.ViewBlock.VBMatches_ = []; 
   Blockly.ViewBlock.visible = false;
+  Blockly.ViewBlock.VBMatches_ = []; 
   Blockly.ViewBlock.VBMatchesIdx_ = 0; 
 };
 
@@ -390,6 +392,7 @@ Blockly.ViewBlock.createAutoComplete_ = function(inputText){
       var blockName = goog.dom.getElement(inputText).value;
       var blocks = Blockly.mainWorkspace.getAllBlocks();
       Blockly.ViewBlock.VBMatches_ = []; 
+      Blockly.ViewBlock.VBMatchesIdx_ = 0; 
       // var matches = []; 
       for (var i = 0; i < blocks.length; i++) {      
         block = blocks[i]; 
@@ -420,6 +423,7 @@ Blockly.ViewBlock.createAutoComplete_ = function(inputText){
         var selectedBlock = Blockly.ViewBlock.VBMatches_[Blockly.ViewBlock.VBMatchesIdx_]; 
         var coords = selectedBlock.getRelativeToSurfaceXY(); 
         Blockly.mainWorkspace.scrollbar.set(coords.x, coords.y);
+        selectedBlock.select(); 
       } else {
         // console.log('No matches found for ' + blockName); 
       }
