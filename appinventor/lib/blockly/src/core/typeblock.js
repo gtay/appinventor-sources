@@ -42,43 +42,44 @@ Blockly.TypeBlock = function( htmlConfig ){
   Blockly.TypeBlock.inputKh_ = new goog.events.KeyHandler(goog.dom.getElement(Blockly.TypeBlock.inputText_));
 
   Blockly.TypeBlock.handleKey = function(e){
-    if (e.altKey || e.ctrlKey || e.metaKey || e.keycode === 9) return; // 9 is tab
-    //We need to duplicate delete handling here from blockly.js
-    if (e.keyCode === 8 || e.keyCode === 46) {
-      // Delete or backspace.
-      // If the panel is showing the panel, just return to allow deletion in the panel itself
-      if (goog.style.isElementShown(goog.dom.getElement(Blockly.TypeBlock.typeBlockDiv_))) return;
-      // if id is empty, it is deleting inside a block title
-      if (e.target.id === '') return;
-      // only when selected and deletable, actually delete the block
-      if (Blockly.selected && Blockly.selected.deletable) {
-        Blockly.hideChaff();
-        Blockly.selected.dispose(true, true);
+    if (!Blockly.ViewBlock.visible) { 
+      if (e.altKey || e.ctrlKey || e.metaKey || e.keycode === 9) return; // 9 is tab
+      //We need to duplicate delete handling here from blockly.js
+      if (e.keyCode === 8 || e.keyCode === 46) {
+        // Delete or backspace.
+        // If the panel is showing the panel, just return to allow deletion in the panel itself
+        if (goog.style.isElementShown(goog.dom.getElement(Blockly.TypeBlock.typeBlockDiv_))) return;
+        // if id is empty, it is deleting inside a block title
+        if (e.target.id === '') return;
+        // only when selected and deletable, actually delete the block
+        if (Blockly.selected && Blockly.selected.deletable) {
+          Blockly.hideChaff();
+          Blockly.selected.dispose(true, true);
+        }
+        // Stop the browser from going back to the previous page.
+        e.preventDefault();
+        return;
       }
-      // Stop the browser from going back to the previous page.
-      e.preventDefault();
-      return;
-    }
-    if (e.keyCode === 27){ //Dismiss the panel with esc
-      Blockly.TypeBlock.hide();
-      return;
-    }
-    // A way to know if the user is editing a block or trying to type a new one
-    if (e.target.id === '') return;
-    if (goog.style.isElementShown(goog.dom.getElement(Blockly.TypeBlock.typeBlockDiv_))) {
-      // Enter in the panel makes it select an option
-      if (e.keyCode === 13) Blockly.TypeBlock.hide();
-    }
-    else {
-      Blockly.TypeBlock.show();
-      // Can't seem to make Firefox display first character, so keep all browsers from automatically
-      // displaying the first character and add it manually.
-      e.preventDefault();
-      goog.dom.getElement(Blockly.TypeBlock.inputText_).value =
-	String.fromCharCode(e.charCode != null ? e.charCode : e.keycode);
+      if (e.keyCode === 27){ //Dismiss the panel with esc
+        Blockly.TypeBlock.hide();
+        return;
+      }
+      // A way to know if the user is editing a block or trying to type a new one
+      if (e.target.id === '') return;
+      if (goog.style.isElementShown(goog.dom.getElement(Blockly.TypeBlock.typeBlockDiv_))) {
+        // Enter in the panel makes it select an option
+        if (e.keyCode === 13) Blockly.TypeBlock.hide();
+      }
+      else {
+        Blockly.TypeBlock.show();
+        // Can't seem to make Firefox display first character, so keep all browsers from automatically
+        // displaying the first character and add it manually.
+        e.preventDefault();
+        goog.dom.getElement(Blockly.TypeBlock.inputText_).value =
+  	String.fromCharCode(e.charCode != null ? e.charCode : e.keycode);
+      }
     }
   };
-
   goog.events.listen(Blockly.TypeBlock.docKh_, 'key', Blockly.TypeBlock.handleKey);
   // Create the auto-complete panel
   Blockly.TypeBlock.createAutoComplete_(Blockly.TypeBlock.inputText_);
@@ -203,7 +204,6 @@ Blockly.TypeBlock.needsReload = {
  * @private
  */
 Blockly.TypeBlock.lazyLoadOfOptions_ = function () {
-
   // Optimisation to avoid reloading all components and built-in objects unless it is needed.
   // needsReload.components is setup when adding/renaming/removing a component in components.js
   if (this.needsReload.components){
@@ -225,7 +225,6 @@ Blockly.TypeBlock.lazyLoadOfOptions_ = function () {
  * example of how to call this function.
  */
 Blockly.TypeBlock.generateOptions = function() {
-
   var buildListOfOptions = function() {
     var listOfOptions = {};
     var typeblockArray;

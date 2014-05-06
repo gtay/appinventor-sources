@@ -36,6 +36,7 @@ goog.require('Blockly.Mutator');
 goog.require('Blockly.Warning');
 goog.require('Blockly.Workspace');
 goog.require('Blockly.Xml');
+goog.require('Blockly.ViewBlock'); 
 goog.require('goog.Timer');
 
 
@@ -75,6 +76,7 @@ Blockly.Block = function(workspace, prototypeName) {
   this.isInFlyout = workspace.isFlyout;
 
   workspace.addTopBlock(this);
+  Blockly.ViewBlock.needsReload.components = true;
 
   // Copy the type-specific functions and data from the prototype.
   if (prototypeName) {
@@ -322,6 +324,7 @@ Blockly.Block.prototype.dispose = function(healStack, animate) {
     this.svg_.dispose();
     this.svg_ = null;
   }
+  Blockly.ViewBlock.needsReload.components = true;
   // Remove any associated errors or warnings.
   Blockly.WarningHandler.checkDisposedBlock.call(this);
 };

@@ -45,6 +45,7 @@ goog.require('Blockly.inject');
 goog.require('Blockly.Procedures');
 //goog.require('Blockly.Toolbox');
 goog.require('Blockly.TypeBlock');
+goog.require('Blockly.ViewBlock');
 goog.require('Blockly.utils');
 goog.require('Blockly.WidgetDiv');
 goog.require('Blockly.Workspace');
@@ -487,6 +488,14 @@ Blockly.showContextMenu_ = function(xy) {
       }
     }
 
+    //Option to select view block
+    var viewOption = {enabled: true};
+    viewOption.text = Blockly.MSG_VIEW;
+    viewOption.callback = function() {
+      Blockly.ViewBlock.show();
+    };
+    options.push(viewOption);
+
     // Option to collapse top blocks.
     var collapseOption = {enabled: hasExpandedBlocks};
     collapseOption.text = Blockly.MSG_COLLAPSE_ALL;
@@ -647,6 +656,7 @@ Blockly.showContextMenu_ = function(xy) {
   options.push(helpOption);
 
   Blockly.ContextMenu.show(xy, options);
+
 };
 
 /**
@@ -686,6 +696,7 @@ Blockly.hideChaff = function(opt_allowToolbox) {
   //Blockly.Toolbox.clearSelection();
   //}
   Blockly.TypeBlock && Blockly.TypeBlock.hide();
+  Blockly.ViewBlock && Blockly.ViewBlock.hide();
 };
 
 /**

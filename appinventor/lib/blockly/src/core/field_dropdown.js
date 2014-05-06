@@ -28,6 +28,7 @@
 goog.provide('Blockly.FieldDropdown');
 
 goog.require('Blockly.Field');
+goog.require('Blockly.ViewBlock'); 
 
 
 /**
@@ -288,6 +289,7 @@ Blockly.FieldDropdown.prototype.getValue = function() {
  * @param {string} newValue New value to set.
  */
 Blockly.FieldDropdown.prototype.setValue = function(newValue) {
+  Blockly.ViewBlock.needsReload.components = true;
   this.value_ = newValue;
   // Look up and display the human-readable text.
   var options = this.getOptions_();
