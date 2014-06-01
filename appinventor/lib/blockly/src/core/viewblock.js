@@ -203,8 +203,10 @@ Blockly.ViewBlock.handleNext = function(e) {
       Blockly.ViewBlock.VBMatchesIdx_ += 1; 
     }
     var selectedBlock = Blockly.ViewBlock.VBMatches_[Blockly.ViewBlock.VBMatchesIdx_]; 
-    var coords = selectedBlock.getRelativeToSurfaceXY(); 
-    Blockly.mainWorkspace.scrollbar.set(coords.x, coords.y);
+    var coords = selectedBlock.getRelativeToSurfaceXY();
+    Blockly.mainWorkspace.scrollbar.set(0, 0); /* See if there isn't a better way */
+    var views  = Blockly.mainWorkspace.getMetrics();
+    Blockly.mainWorkspace.scrollbar.set(coords.x - views.viewLeft , coords.y - views.viewTop);
     selectedBlock.select(); 
   } else {
     // console.log('No more matches for ' + blockName); 
@@ -224,7 +226,9 @@ Blockly.ViewBlock.handlePrevious = function(e) {
     }
     var selectedBlock = Blockly.ViewBlock.VBMatches_[Blockly.ViewBlock.VBMatchesIdx_]; 
     var coords = selectedBlock.getRelativeToSurfaceXY(); 
-    Blockly.mainWorkspace.scrollbar.set(coords.x, coords.y);
+    Blockly.mainWorkspace.scrollbar.set(0, 0);  /* See if there isn't a better way */
+    var views  = Blockly.mainWorkspace.getMetrics();
+    Blockly.mainWorkspace.scrollbar.set(coords.x - views.viewLeft , coords.y - views.viewTop);
     selectedBlock.select(); 
   } else {
     // console.log('No more matches for ' + blockName); 
@@ -420,9 +424,11 @@ Blockly.ViewBlock.createAutoComplete_ = function(inputText){
       // do we want to select the block and highlight it? 
       if (Blockly.ViewBlock.VBMatches_.length > 0) { 
         goog.dom.getElement(Blockly.ViewBlock.matchesText_).innerHTML = Blockly.ViewBlock.VBMatches_.length.toString() + ' match(es) found.'; 
-        var selectedBlock = Blockly.ViewBlock.VBMatches_[Blockly.ViewBlock.VBMatchesIdx_]; 
+        var selectedBlock = Blockly.ViewBlock.VBMatches_[Blockly.ViewBlock.VBMatchesIdx_];
         var coords = selectedBlock.getRelativeToSurfaceXY(); 
-        Blockly.mainWorkspace.scrollbar.set(coords.x, coords.y);
+        Blockly.mainWorkspace.scrollbar.set(0, 0);  /* See if there isn't a better way */
+        var views  = Blockly.mainWorkspace.getMetrics();
+        Blockly.mainWorkspace.scrollbar.set(coords.x - views.viewLeft , coords.y - views.viewTop);
         selectedBlock.select(); 
       } else {
         // console.log('No matches found for ' + blockName); 
